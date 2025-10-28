@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "postcompile": "node scripts/export_abi.js"
+  }
+}
