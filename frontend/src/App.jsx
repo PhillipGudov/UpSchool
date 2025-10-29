@@ -618,7 +618,7 @@ export default function App() {
         </div>
       </section>
 
-      <footer className="small center">Local-only demo • Ganache 1337 • IPFS Kubo</footer>
+      <footer className="small center">© UpSchool • Phillip Gudov, Zachary James, Tai Pham</footer>
     </div>
   );
 }
