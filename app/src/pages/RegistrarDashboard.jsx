@@ -1,74 +1,112 @@
 // app/src/pages/RegistrarDashboard.jsx
-import React, { useContext, useEffect, useState } from "react";
-import { Web3Ctx } from "../blockchain/Web3Provider.jsx";
-import { useRoles } from "../blockchain/useRoles.js";
-import RoleGuard from "../components/RoleGuard.jsx";
+import React, { useContext, useState } from 'react';
+import { Web3Context } from '../components/Web3Provider';
+// For IPFS, using the IPFS HTTP client
+import { create } from 'ipfs-http-client';
+
+const ipfs = create({ url: 'http://localhost:5001/api/v0' }); 
+// Ensure your IPFS daemon (Kubo) is running and CORS is configured to allow this origin.
 
 export default function RegistrarDashboard() {
-  const { web3, contract, account } = useContext(Web3Ctx);
-  const { isRegistrar, loading } = useRoles();
-  const [feeEth, setFeeEth] = useState("0.01");
-  const [currentFee, setCurrentFee] = useState(null);
-  const [txMsg, setTxMsg] = useState("");
+  const { contract, currentAccount } = useContext(Web3Context);
+  const [newUserAddress, setNewUserAddress] = useState("");
+  const [newUserRole, setNewUserRole] = useState("STUDENT"); // default role selection
+  const [uploadStudentAddress, setUploadStudentAddress] = useState("");
+  const [uploadFile, setUploadFile] = useState(null);
+  const [statusMessage, setStatusMessage] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      if (!contract) return;
-      const feeWei = await contract.methods.verificationFee().call();
-      setCurrentFee(web3?.utils?.fromWei(feeWei, "ether"));
-    })();
-  }, [contract, web3]);
-
-  if (loading) return <p>Loading role…</p>;
-
-  const setFee = async (e) => {
+  // Handler to register a new user with selected role
+  const handleRegisterUser = async (e) => {
     e.preventDefault();
-    setTxMsg("Sending transaction…");
+    if (!newUserAddress) return;
     try {
-      const wei = web3.utils.toWei(feeEth, "ether");
-      await contract.methods.setVerificationFee(wei).send({ from: account });
-      setCurrentFee(feeEth);
-      setTxMsg("✅ Fee updated");
+      if (newUserRole === "STUDENT") {
+        await contract.methods.registerStudent(newUserAddress).send({ from: currentAccount });
+      } else if (newUserRole === "TEACHER") {
+        await contract.methods.registerTeacher(newUserAddress).send({ from: currentAccount });
+      } else if (newUserRole === "VERIFIER") {
+        await contract.methods.registerVerifier(newUserAddress).send({ from: currentAccount });
+      }
+      setStatusMessage(`Successfully added ${newUserRole}: ${newUserAddress}`);
     } catch (err) {
-      setTxMsg(`❌ ${err.message}`);
+      console.error(err);
+      setStatusMessage("Error registering user (check console).");
     }
   };
 
-  const withdraw = async () => {
-    setTxMsg("Sending transaction…");
+  // Handler to upload transcript file to IPFS and send hash to contract
+  const handleUploadTranscript = async (e) => {
+    e.preventDefault();
+    if (!uploadStudentAddress || !uploadFile) return;
     try {
-      await contract.methods.withdrawFees().send({ from: account });
-      setTxMsg("✅ Fees withdrawn");
+      // 1. Upload file to IPFS
+      const added = await ipfs.add(uploadFile);
+      const ipfsHash = added.path;  // 'path' contains the CID string in ipfs-http-client
+      // 2. Call smart contract to store this hash for the student
+      await contract.methods.uploadTranscript(uploadStudentAddress, ipfsHash).send({ from: currentAccount });
+      setStatusMessage(`Transcript uploaded for student ${uploadStudentAddress}: IPFS hash ${ipfsHash}`);
     } catch (err) {
-      setTxMsg(`❌ ${err.message}`);
+      console.error("IPFS/Upload error", err);
+      setStatusMessage("Error uploading transcript (check console).");
     }
   };
 
   return (
-    <RoleGuard allowed={isRegistrar}>
-      <h2>Registrar Dashboard</h2>
-      <p>Connected as: <b>{account}</b></p>
+    <div className="max-w-xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Registrar Dashboard</h2>
 
-      <div style={{display:"grid", gap:24}}>
-        <form onSubmit={setFee} style={card}>
-          <h3>Set Verification Fee</h3>
-          <p>Current fee: <b>{currentFee ?? "…"}</b> ETH</p>
-          <label style={{display:"grid", gap:8}}>
-            <span>New fee (ETH)</span>
-            <input type="number" step="0.0001" value={feeEth} onChange={e=>setFeeEth(e.target.value)} />
-          </label>
-          <button>Save</button>
-        </form>
-
-        <div style={card}>
-          <h3>Withdraw Accumulated Fees</h3>
-          <button onClick={withdraw}>Withdraw to Registrar</button>
+      {/* Form: Register new user */}
+      <form onSubmit={handleRegisterUser} className="mb-6 p-4 border border-gray-300 rounded">
+        <h3 className="font-semibold mb-2">Add New User</h3>
+        <div className="mb-2">
+          <label className="block mb-1">User Ethereum Address:</label>
+          <input 
+            type="text" 
+            value={newUserAddress} 
+            onChange={e => setNewUserAddress(e.target.value)} 
+            className="w-full p-2 border"
+            placeholder="0x1234...abcd"
+            required 
+          />
         </div>
-      </div>
+        <div className="mb-2">
+          <label className="block mb-1">Role:</label>
+          <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)} className="p-2 border">
+            <option value="STUDENT">Student</option>
+            <option value="TEACHER">Teacher</option>
+            <option value="VERIFIER">Verifier</option>
+          </select>
+        </div>
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Register User</button>
+      </form>
 
-      {txMsg && <p>{txMsg}</p>}
-    </RoleGuard>
+      {/* Form: Upload Transcript */}
+      <form onSubmit={handleUploadTranscript} className="mb-6 p-4 border border-gray-300 rounded">
+        <h3 className="font-semibold mb-2">Upload Transcript</h3>
+        <div className="mb-2">
+          <label className="block mb-1">Student Address:</label>
+          <input 
+            type="text" 
+            value={uploadStudentAddress} 
+            onChange={e => setUploadStudentAddress(e.target.value)} 
+            className="w-full p-2 border"
+            placeholder="Student's address (must be registered)"
+            required 
+          />
+        </div>
+        <div className="mb-2">
+          <label className="block mb-1">Transcript File:</label>
+          <input 
+            type="file" 
+            onChange={e => setUploadFile(e.target.files[0])}
+            className="block w-full text-sm text-gray-600"
+            required 
+          />
+        </div>
+        <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">Upload to IPFS & Save</button>
+      </form>
+
+      {statusMessage && <div className="p-2 bg-gray-100 text-center">{statusMessage}</div>}
+    </div>
   );
 }
-
-const card = { border:"1px solid #eee", borderRadius:12, padding:16 };
