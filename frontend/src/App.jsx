@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// UpSchool Interface — Phase 1 polish (spacing, header, pills, toasts, badges)
+// UpSchool Interface — Phase 1 polish (with added micro-descriptions)
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
@@ -7,7 +7,7 @@ import { create as createIpfsClient } from "ipfs-http-client";
 import abi from "./abi.json";
 import "./index.css";
 
-/* ---------- tiny toast system (no deps) ---------- */
+/* ---------- tiny toast system ---------- */
 function Toasts({ toasts, onClose }) {
   return (
     <div className="toast-wrap" aria-live="polite">
@@ -56,7 +56,7 @@ export default function App() {
     registrar: false,
     teacher: false,
     student: false,
-    verifier: true, // anyone can verify by paying fee
+    verifier: true,
   });
   const [feeWei, setFeeWei] = useState("0");
   const [contractBalance, setContractBalance] = useState("0");
@@ -69,7 +69,6 @@ export default function App() {
     const id = Math.random().toString(36).slice(2);
     const toast = { id, ...t };
     setToasts((x) => [...x, toast]);
-    // auto-dismiss except pending
     if (t.kind !== "pending") setTimeout(() => closeToast(id), 3500);
     return id;
   };
@@ -115,7 +114,6 @@ export default function App() {
     () => ethers.keccak256(ethers.toUtf8Bytes("TEACHER_ROLE")),
     []
   );
-  const STATUS = { Present: 0, Absent: 1, Excused: 2 };
 
   /* ---------- init IPFS ---------- */
   useEffect(() => {
@@ -192,7 +190,6 @@ export default function App() {
     }
   };
 
-  // react to account/chain changes
   useEffect(() => {
     if (!window.ethereum) return;
     const handler = () => connect().catch((e) => setError(e.message));
@@ -204,7 +201,6 @@ export default function App() {
     };
   }, []);
 
-  // auto-connect
   useEffect(() => {
     connect().catch((e) => setError(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,11 +231,7 @@ export default function App() {
     const res = await ipfs.add(file);
     const cid = res?.cid?.toString() || "";
     if (cid) {
-      pushToast({
-        kind: "success",
-        title: "IPFS upload complete",
-        body: cid,
-      });
+      pushToast({ kind: "success", title: "IPFS upload complete", body: cid });
     }
     return cid;
   };
@@ -247,7 +239,6 @@ export default function App() {
   const scrollTo = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    // offset for sticky header
     const y = el.getBoundingClientRect().top + window.scrollY - 86;
     window.scrollTo({ top: y, behavior: "smooth" });
   };
@@ -470,6 +461,7 @@ export default function App() {
             <h3>Enroll Student</h3>
             <input placeholder="studentAddress (0x…)" value={studentAddr} onChange={(e) => setStudentAddr(e.target.value)} />
             <input placeholder="courseId" value={enrollCourseId} onChange={(e) => setEnrollCourseId(e.target.value)} />
+            <div className="hint">Enrolls a registered student into a selected course</div>
             <button disabled={busy || !roles.registrar || !ethers.isAddress(studentAddr || "") || !enrollCourseId} onClick={onEnroll}>
               Enroll
             </button>
@@ -521,6 +513,7 @@ export default function App() {
               <option>Excused</option>
             </select>
             <input type="file" onChange={(e) => setAttFile(e.target.files?.[0] || null)} />
+            <div className="hint">Records a student’s attendance for a specific class date</div>
             <button
               disabled={busy || !roles.teacher || !ethers.isAddress(attStudentAddr || "") || !attCourseId || !attDate}
               onClick={onMarkAttendance}
@@ -549,6 +542,7 @@ export default function App() {
           <div>
             <h3>View Grade</h3>
             <input placeholder="courseId" value={viewCourseId} onChange={(e) => setViewCourseId(e.target.value)} />
+            <div className="hint">Retrieve your final grade and linked IPFS transcript</div>
             <button disabled={busy || !viewCourseId} onClick={onViewRecord}>Fetch</button>
             {recordView && (
               <div className="box">
@@ -569,6 +563,7 @@ export default function App() {
           <div>
             <h3>View Attendance</h3>
             <input placeholder="courseId" value={viewCourseId} onChange={(e) => setViewCourseId(e.target.value)} />
+            <div className="hint">View your full attendance history for a selected course</div>
             <button disabled={busy || !viewCourseId} onClick={onViewAttendance}>Fetch</button>
             {attendanceView?.length > 0 && (
               <table className="table zebra">
@@ -603,6 +598,7 @@ export default function App() {
             <input placeholder="studentAddress (0x…)" value={verStudentAddr} onChange={(e) => setVerStudentAddr(e.target.value)} />
             <input placeholder="courseId" value={verCourseId} onChange={(e) => setVerCourseId(e.target.value)} />
             <div className="row small">Current fee: <b>{feeEth}</b> ETH</div>
+            <div className="hint">Verify a student’s transcript authenticity using the official fee</div>
             <button disabled={busy || !ethers.isAddress(verStudentAddr || "") || !verCourseId} onClick={onVerify}>Verify</button>
             {verifyResult && (
               <div className="box">
