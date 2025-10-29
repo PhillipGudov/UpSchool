@@ -302,7 +302,12 @@ export default function App() {
     <div className="container">
       <header className="card">
         <div className="row">
-          <h1>PowerSchool DApp</h1>
+          <img
+  src="/logo.png"
+  alt="UpSchool Logo"
+  style={{ height: "64px", marginBottom: "8px" }}
+/>
+<h1>UpSchool Interface</h1>
           <button disabled={busy} onClick={() => connect().catch((e) => setError(e.message))}>
             {account ? `Connected: ${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet"}
           </button>
