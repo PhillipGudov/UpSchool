@@ -1,0 +1,23 @@
+/* src/index.css */
+/* ──────────────  Minimal styles; no Tailwind to keep files small. */
+:root { font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif; color-scheme: light dark; }
+body { margin: 0; background: #0b0b0c; color: #e8e8ea; }
+.container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+.card { background: #141418; border: 1px solid #282833; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.row { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.small { font-size: 0.9rem; opacity: 0.9; }
+.center { text-align: center; }
+button { background: #3b82f6; color: white; border: 0; padding: 10px 14px; border-radius: 8px; cursor: pointer; }
+button[disabled] { opacity: 0.5; cursor: not-allowed; }
+input, select { width: 100%; margin: 6px 0; padding: 10px; border-radius: 8px; border: 1px solid #2a2a35; background: #0f0f14; color: #e8e8ea; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+h1, h2, h3 { margin: 6px 0 8px; }
+.pill { border: 1px solid #2a2a35; padding: 4px 10px; border-radius: 999px; }
+.pill.ok { background: #16a34a33; border-color: #16a34a; }
+.box { border: 1px dashed #2a2a35; border-radius: 8px; padding: 8px; margin-top: 8px; }
+.table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.table th, .table td { border-bottom: 1px solid #2a2a35; padding: 6px 8px; text-align: left; }
+.error { margin-top: 8px; color: #fca5a5; }
+.pending { color: #eab308; }
+.success { color: #86efac; }
+.reverted, .error { color: #f87171; }

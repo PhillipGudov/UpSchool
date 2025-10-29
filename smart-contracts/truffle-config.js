@@ -1,0 +1,19 @@
+// smart-contracts/truffle-config.js
+// ───────────────────────────────────────
+module.exports = {
+  networks: {
+    development: {
+      host: "127.0.0.1",
+      port: 8545,
+      network_id: 1337, // Ganache chainId
+    },
+  },
+  compilers: {
+    solc: {
+      version: "0.8.20",
+      settings: {
+        optimizer: { enabled: true, runs: 200 },
+      },
+    },
+  },
+};
