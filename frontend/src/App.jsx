@@ -1,5 +1,5 @@
 // frontend/src/App.jsx
-// UpSchool Interface — single page DApp (Registrar / Teacher / Student / Verifier)
+// UpSchool Interface — Phase 1 polish (spacing, header, pills, toasts, badges)
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
@@ -7,30 +7,74 @@ import { create as createIpfsClient } from "ipfs-http-client";
 import abi from "./abi.json";
 import "./index.css";
 
+/* ---------- tiny toast system (no deps) ---------- */
+function Toasts({ toasts, onClose }) {
+  return (
+    <div className="toast-wrap" aria-live="polite">
+      {toasts.map((t) => (
+        <div key={t.id} className={`toast ${t.kind}`}>
+          <div className="toast-row">
+            <strong className="toast-title">{t.title}</strong>
+            <button className="toast-x" onClick={() => onClose(t.id)} aria-label="Dismiss">×</button>
+          </div>
+          {t.body && <div className="toast-body">{t.body}</div>}
+          {t.hash && (
+            <div className="toast-body">
+              <span className="mono">{t.hash.slice(0, 10)}…{t.hash.slice(-10)}</span>
+              <button
+                className="copy"
+                onClick={() => navigator.clipboard.writeText(t.hash)}
+                title="Copy tx hash"
+              >
+                Copy
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   // ENV
   const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
   const IPFS_API = import.meta.env.VITE_IPFS_API || "http://127.0.0.1:5001";
+  const LOCAL_GATEWAY = import.meta.env.VITE_IPFS_GATEWAY || "http://127.0.0.1:8080/ipfs/";
 
   // singletons
   const providerRef = useRef(null);
   const signerRef = useRef(null);
   const contractRef = useRef(null);
+  const headerRef = useRef(null);
 
   // state
   const [ipfs, setIpfs] = useState(null);
   const [account, setAccount] = useState("");
+  const [chainId, setChainId] = useState("");
   const [roles, setRoles] = useState({
     registrar: false,
     teacher: false,
     student: false,
-    verifier: true, // anyone can verify (pays fee), so true by default
+    verifier: true, // anyone can verify by paying fee
   });
   const [feeWei, setFeeWei] = useState("0");
   const [contractBalance, setContractBalance] = useState("0");
   const [busy, setBusy] = useState(false);
-  const [lastTx, setLastTx] = useState({ hash: "", status: "" });
   const [error, setError] = useState("");
+
+  // Toasts
+  const [toasts, setToasts] = useState([]);
+  const pushToast = (t) => {
+    const id = Math.random().toString(36).slice(2);
+    const toast = { id, ...t };
+    setToasts((x) => [...x, toast]);
+    // auto-dismiss except pending
+    if (t.kind !== "pending") setTimeout(() => closeToast(id), 3500);
+    return id;
+  };
+  const updateToast = (id, next) => setToasts((x) => x.map((t) => (t.id === id ? { ...t, ...next } : t)));
+  const closeToast = (id) => setToasts((x) => x.filter((t) => t.id !== id));
 
   // Registrar inputs
   const [courseId, setCourseId] = useState("");
@@ -71,20 +115,31 @@ export default function App() {
     () => ethers.keccak256(ethers.toUtf8Bytes("TEACHER_ROLE")),
     []
   );
-
   const STATUS = { Present: 0, Absent: 1, Excused: 2 };
 
-  // init IPFS
+  /* ---------- init IPFS ---------- */
   useEffect(() => {
     try {
       setIpfs(createIpfsClient({ url: IPFS_API }));
     } catch (e) {
-      console.warn("IPFS init failed:", e);
       setError("Failed to create IPFS client. Check VITE_IPFS_API.");
     }
   }, [IPFS_API]);
 
-  // wallet + contract
+  /* ---------- header shadow on scroll ---------- */
+  useEffect(() => {
+    const onScroll = () => {
+      const h = headerRef.current;
+      if (!h) return;
+      if (window.scrollY > 4) h.classList.add("elevated");
+      else h.classList.remove("elevated");
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* ---------- wallet + contract ---------- */
   const connect = async () => {
     setError("");
     if (!window.ethereum) return setError("MetaMask not found.");
@@ -96,6 +151,9 @@ export default function App() {
     const [addr] = await window.ethereum.request({ method: "eth_requestAccounts" });
     setAccount(addr);
 
+    const network = await provider.getNetwork();
+    setChainId(network.chainId ? Number(network.chainId) : "");
+
     const signer = await provider.getSigner();
     signerRef.current = signer;
 
@@ -104,7 +162,6 @@ export default function App() {
     await refreshBasics(addr);
   };
 
-  // load roles, fee, balance
   const refreshBasics = async (addrOverride) => {
     try {
       const c = contractRef.current;
@@ -112,22 +169,24 @@ export default function App() {
       const addr = addrOverride || account;
       if (!c || !provider || !addr) return;
 
-      const [isReg, isTeach, isStud, fee, balWei] = await Promise.all([
+      const [isReg, isTeach, isStud, fee, balWei, net] = await Promise.all([
         c.hasRole(REGISTRAR_ROLE, addr),
         c.hasRole(TEACHER_ROLE, addr),
-        c.registeredStudents(addr), // student = registeredStudents mapping
+        c.registeredStudents(addr),
         c.verificationFee(),
         provider.getBalance(CONTRACT_ADDRESS),
+        provider.getNetwork(),
       ]);
 
       setRoles({
         registrar: Boolean(isReg),
         teacher: Boolean(isTeach),
         student: Boolean(isStud),
-        verifier: true, // always allowed to verify (subject to fee)
+        verifier: true,
       });
       setFeeWei(fee.toString());
       setContractBalance(ethers.formatEther(balWei));
+      setChainId(net.chainId ? Number(net.chainId) : "");
     } catch (e) {
       setError(e.shortMessage || e.message);
     }
@@ -151,20 +210,21 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // helpers
-  const runTx = async (fn) => {
-    setBusy(true);
+  /* ---------- helpers ---------- */
+  const runTx = async (fn, label = "Transaction") => {
     setError("");
-    setLastTx({ hash: "", status: "" });
+    setBusy(true);
+    let tid;
     try {
       const tx = await fn();
-      setLastTx({ hash: tx.hash, status: "pending" });
+      tid = pushToast({ kind: "pending", title: `${label}: pending`, hash: tx.hash });
       const rc = await tx.wait();
-      setLastTx({ hash: rc.hash, status: rc.status === 1 ? "success" : "reverted" });
+      updateToast(tid, { kind: rc.status === 1 ? "success" : "error", title: `${label}: ${rc.status === 1 ? "success" : "reverted"}` });
       await refreshBasics();
     } catch (e) {
+      if (tid) updateToast(tid, { kind: "error", title: `${label}: failed`, body: e.shortMessage || e.message });
+      else pushToast({ kind: "error", title: `${label}: failed`, body: e.shortMessage || e.message });
       setError(e.shortMessage || e.message);
-      setLastTx((t) => ({ ...t, status: "error" }));
     } finally {
       setBusy(false);
     }
@@ -173,76 +233,105 @@ export default function App() {
   const uploadToIPFS = async (file) => {
     if (!file || !ipfs) return "";
     const res = await ipfs.add(file);
-    return res?.cid?.toString() || "";
+    const cid = res?.cid?.toString() || "";
+    if (cid) {
+      pushToast({
+        kind: "success",
+        title: "IPFS upload complete",
+        body: cid,
+      });
+    }
+    return cid;
   };
 
   const scrollTo = (id) => {
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!el) return;
+    // offset for sticky header
+    const y = el.getBoundingClientRect().top + window.scrollY - 86;
+    window.scrollTo({ top: y, behavior: "smooth" });
   };
 
-  // Registrar
+  const short = (s) => (s ? `${s.slice(0, 6)}…${s.slice(-4)}` : "");
+
+  /* ---------- Registrar ---------- */
   const onAddCourse = () =>
-    runTx(() =>
-      contractRef.current.addCourse(
-        BigInt(courseId || "0"),
-        courseName || "",
-        teacherAddr || ethers.ZeroAddress
-      )
+    runTx(
+      () =>
+        contractRef.current.addCourse(
+          BigInt(courseId || "0"),
+          courseName || "",
+          teacherAddr || ethers.ZeroAddress
+        ),
+      "Add course"
     );
 
   const onRegisterStudent = () =>
-    runTx(() => contractRef.current.registerStudent(studentAddr || ethers.ZeroAddress));
+    runTx(
+      () => contractRef.current.registerStudent(studentAddr || ethers.ZeroAddress),
+      "Register student"
+    );
 
   const onEnroll = () =>
-    runTx(() =>
-      contractRef.current.enrollInCourse(
-        studentAddr || ethers.ZeroAddress,
-        BigInt(enrollCourseId || "0")
-      )
+    runTx(
+      () =>
+        contractRef.current.enrollInCourse(
+          studentAddr || ethers.ZeroAddress,
+          BigInt(enrollCourseId || "0")
+        ),
+      "Enroll student"
     );
 
   const onSetFee = () =>
-    runTx(() => contractRef.current.setVerificationFee(ethers.parseEther(newFeeEth || "0")));
+    runTx(
+      () => contractRef.current.setVerificationFee(ethers.parseEther(newFeeEth || "0")),
+      "Set verification fee"
+    );
 
-  const onWithdraw = () => runTx(() => contractRef.current.withdrawFees());
+  const onWithdraw = () => runTx(() => contractRef.current.withdrawFees(), "Withdraw fees");
 
-  // Teacher
+  /* ---------- Teacher ---------- */
   const onIssueGrade = async () => {
     const ipfsHash = await uploadToIPFS(gradeFile);
-    return runTx(() =>
-      contractRef.current.issueGrade(
-        issueStudentAddr || ethers.ZeroAddress,
-        BigInt(issueCourseId || "0"),
-        grade || "",
-        ipfsHash
-      )
+    return runTx(
+      () =>
+        contractRef.current.issueGrade(
+          issueStudentAddr || ethers.ZeroAddress,
+          BigInt(issueCourseId || "0"),
+          grade || "",
+          ipfsHash
+        ),
+      "Issue grade"
     );
   };
 
   const onMarkAttendance = async () => {
     const ipfsHash = await uploadToIPFS(attFile);
     const ts = attDate ? Math.floor(new Date(`${attDate}T00:00:00Z`).getTime() / 1000) : 0;
-    return runTx(() =>
-      contractRef.current.markAttendance(
-        attStudentAddr || ethers.ZeroAddress,
-        BigInt(attCourseId || "0"),
-        BigInt(ts),
-        { Present: 0, Absent: 1, Excused: 2 }[attStatus] ?? 0,
-        ipfsHash
-      )
+    return runTx(
+      () =>
+        contractRef.current.markAttendance(
+          attStudentAddr || ethers.ZeroAddress,
+          BigInt(attCourseId || "0"),
+          BigInt(ts),
+          { Present: 0, Absent: 1, Excused: 2 }[attStatus] ?? 0,
+          ipfsHash
+        ),
+      "Mark attendance"
     );
   };
 
   const onFinalize = () =>
-    runTx(() =>
-      contractRef.current.finalizeRecord(
-        issueStudentAddr || ethers.ZeroAddress,
-        BigInt(issueCourseId || "0")
-      )
+    runTx(
+      () =>
+        contractRef.current.finalizeRecord(
+          issueStudentAddr || ethers.ZeroAddress,
+          BigInt(issueCourseId || "0")
+        ),
+      "Finalize record"
     );
 
-  // Student views
+  /* ---------- Student views ---------- */
   const onViewRecord = async () => {
     setError("");
     setRecordView(null);
@@ -271,19 +360,21 @@ export default function App() {
     }
   };
 
-  // Verifier
+  /* ---------- Verifier ---------- */
   const onVerify = async () => {
     setError("");
     setVerifyResult(null);
     try {
       const fee = await contractRef.current.verificationFee();
-      const tx = await contractRef.current.verifyTranscript(
-        verStudentAddr || ethers.ZeroAddress,
-        BigInt(verCourseId || "0"),
-        { value: fee }
+      await runTx(
+        () =>
+          contractRef.current.verifyTranscript(
+            verStudentAddr || ethers.ZeroAddress,
+            BigInt(verCourseId || "0"),
+            { value: fee }
+          ),
+        "Verify transcript"
       );
-      const rc = await tx.wait();
-      setLastTx({ hash: rc.hash, status: rc.status === 1 ? "success" : "reverted" });
       const rec = await contractRef.current.viewRecord(
         verStudentAddr || ethers.ZeroAddress,
         BigInt(verCourseId || "0")
@@ -295,104 +386,133 @@ export default function App() {
     }
   };
 
-  // UI
+  /* ---------- UI ---------- */
+  const onGanache = Number(chainId) === 1337;
+  const feeEth = ethers.formatEther(feeWei || "0");
+
   return (
     <div className="container">
-      <header className="card">
-        <div className="row">
-          <div>
-            <img src="/logo.png" alt="UpSchool" style={{ height: 40, verticalAlign: "middle", marginRight: 10 }} />
-            <h1 style={{ display: "inline-block", margin: 0 }}>UpSchool Interface</h1>
+      <Toasts toasts={toasts} onClose={closeToast} />
+
+      <header className="card header" ref={headerRef}>
+        <div className="row topbar">
+          <div className="brand">
+            <img src="/logo.png" alt="UpSchool" className="brand-logo" />
+            <h1 className="brand-title">UpSchool Interface</h1>
+            <span className={`net-badge ${onGanache ? "ok" : "warn"}`}>
+              {onGanache ? "Ganache (1337)" : `Chain ${chainId || "?"}`}
+            </span>
           </div>
-          <button disabled={busy} onClick={() => connect().catch((e) => setError(e.message))}>
-            {account ? `Connected: ${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet"}
-          </button>
+
+          <div className="right-actions">
+            <span className="addr-badge" title={CONTRACT_ADDRESS}>
+              Contract: <span className="mono">{short(CONTRACT_ADDRESS || "")}</span>
+              <button
+                className="copy"
+                onClick={() => navigator.clipboard.writeText(CONTRACT_ADDRESS || "")}
+                title="Copy contract address"
+              >
+                Copy
+              </button>
+            </span>
+
+            <button disabled={busy} onClick={() => connect().catch((e) => setError(e.message))}>
+              {account ? `Connected: ${short(account)}` : "Connect Wallet"}
+            </button>
+          </div>
         </div>
 
-        <div className="row small">
+        <div className="row roles">
           <span>Roles:</span>
-          <button className={`pill link ${roles.registrar ? "ok" : ""}`} onClick={() => scrollTo("registrar")}>
-            Registrar
-          </button>
-          <button className={`pill link ${roles.teacher ? "ok" : ""}`} onClick={() => scrollTo("teacher")}>
-            Teacher
-          </button>
-          <button className={`pill link ${roles.student ? "ok" : ""}`} onClick={() => scrollTo("student")}>
-            Student
-          </button>
-          <button className={`pill link ${roles.verifier ? "ok" : ""}`} onClick={() => scrollTo("verifier")}>
-            Verifier
-          </button>
+          <button className={`pill link ${roles.registrar ? "ok" : ""}`} onClick={() => scrollTo("registrar")}>📘 Registrar</button>
+          <button className={`pill link ${roles.teacher ? "ok" : ""}`}   onClick={() => scrollTo("teacher")}>🧑‍🏫 Teacher</button>
+          <button className={`pill link ${roles.student ? "ok" : ""}`}   onClick={() => scrollTo("student")}>🎓 Student</button>
+          <button className={`pill link ${roles.verifier ? "ok" : ""}`}  onClick={() => scrollTo("verifier")}>✅ Verifier</button>
         </div>
 
-        <div className="row small">
-          <span>Verification Fee: {ethers.formatEther(feeWei)} ETH</span>
-          <span>Contract Balance: {contractBalance} ETH</span>
+        <div className="row small meta">
+          <span>Verification Fee: <b>{feeEth}</b> ETH</span>
+          <span>Contract Balance: <b>{contractBalance}</b> ETH</span>
         </div>
 
-        {lastTx.hash && (
-          <div className={`row small ${lastTx.status}`}>
-            <span>Tx: {lastTx.hash}</span>
-            <span>Status: {lastTx.status}</span>
-          </div>
-        )}
         {error && <div className="error">Error: {error}</div>}
       </header>
 
       {/* Registrar */}
-      <section id="registrar" className="card">
+      <section id="registrar" className="card section">
         <h2>Registrar</h2>
+        <div className="divider" />
         <div className="grid">
           <div>
             <h3>Add Course</h3>
             <input placeholder="courseId" value={courseId} onChange={(e) => setCourseId(e.target.value)} />
             <input placeholder="courseName" value={courseName} onChange={(e) => setCourseName(e.target.value)} />
-            <input placeholder="teacherAddress" value={teacherAddr} onChange={(e) => setTeacherAddr(e.target.value)} />
-            <button disabled={busy || !roles.registrar} onClick={onAddCourse}>Add Course</button>
+            <input placeholder="teacherAddress (0x…)" value={teacherAddr} onChange={(e) => setTeacherAddr(e.target.value)} />
+            <div className="hint">Teacher must be a valid address</div>
+            <button
+              disabled={busy || !roles.registrar || !courseId || !courseName || !ethers.isAddress(teacherAddr || "")}
+              onClick={onAddCourse}
+            >
+              Add Course
+            </button>
           </div>
 
           <div>
             <h3>Register Student</h3>
-            <input placeholder="studentAddress" value={studentAddr} onChange={(e) => setStudentAddr(e.target.value)} />
-            <button disabled={busy || !roles.registrar} onClick={onRegisterStudent}>Register</button>
+            <input placeholder="studentAddress (0x…)" value={studentAddr} onChange={(e) => setStudentAddr(e.target.value)} />
+            <div className="hint">Registers the address as a student</div>
+            <button disabled={busy || !roles.registrar || !ethers.isAddress(studentAddr || "")} onClick={onRegisterStudent}>
+              Register
+            </button>
           </div>
 
           <div>
             <h3>Enroll Student</h3>
-            <input placeholder="studentAddress" value={studentAddr} onChange={(e) => setStudentAddr(e.target.value)} />
+            <input placeholder="studentAddress (0x…)" value={studentAddr} onChange={(e) => setStudentAddr(e.target.value)} />
             <input placeholder="courseId" value={enrollCourseId} onChange={(e) => setEnrollCourseId(e.target.value)} />
-            <button disabled={busy || !roles.registrar} onClick={onEnroll}>Enroll</button>
+            <button disabled={busy || !roles.registrar || !ethers.isAddress(studentAddr || "") || !enrollCourseId} onClick={onEnroll}>
+              Enroll
+            </button>
           </div>
 
           <div>
             <h3>Set Verification Fee</h3>
-            <input placeholder="fee (ETH)" value={newFeeEth} onChange={(e) => setNewFeeEth(e.target.value)} />
-            <button disabled={busy || !roles.registrar} onClick={onSetFee}>Set Fee</button>
+            <input placeholder="fee (ETH, e.g. 0.01)" value={newFeeEth} onChange={(e) => setNewFeeEth(e.target.value)} />
+            <div className="hint">Exact fee required by verifiers</div>
+            <button disabled={busy || !roles.registrar || !newFeeEth} onClick={onSetFee}>Set Fee</button>
           </div>
 
           <div>
             <h3>Withdraw Fees</h3>
+            <div className="hint">Send all collected fees to the treasury</div>
             <button disabled={busy || !roles.registrar} onClick={onWithdraw}>Withdraw</button>
           </div>
         </div>
       </section>
 
       {/* Teacher */}
-      <section id="teacher" className="card">
+      <section id="teacher" className="card section">
         <h2>Teacher</h2>
+        <div className="divider" />
         <div className="grid">
           <div>
             <h3>Issue Grade</h3>
-            <input placeholder="studentAddress" value={issueStudentAddr} onChange={(e) => setIssueStudentAddr(e.target.value)} />
+            <input placeholder="studentAddress (0x…)" value={issueStudentAddr} onChange={(e) => setIssueStudentAddr(e.target.value)} />
             <input placeholder="courseId" value={issueCourseId} onChange={(e) => setIssueCourseId(e.target.value)} />
             <input placeholder="grade (e.g., A or 95%)" value={grade} onChange={(e) => setGrade(e.target.value)} />
             <input type="file" onChange={(e) => setGradeFile(e.target.files?.[0] || null)} />
-            <button disabled={busy || !roles.teacher} onClick={onIssueGrade}>Issue</button>
+            <div className="hint">Optional proof file uploaded to IPFS</div>
+            <button
+              disabled={busy || !roles.teacher || !ethers.isAddress(issueStudentAddr || "") || !issueCourseId || !grade}
+              onClick={onIssueGrade}
+            >
+              Issue
+            </button>
           </div>
 
           <div>
             <h3>Mark Attendance</h3>
-            <input placeholder="studentAddress" value={attStudentAddr} onChange={(e) => setAttStudentAddr(e.target.value)} />
+            <input placeholder="studentAddress (0x…)" value={attStudentAddr} onChange={(e) => setAttStudentAddr(e.target.value)} />
             <input placeholder="courseId" value={attCourseId} onChange={(e) => setAttCourseId(e.target.value)} />
             <input type="date" value={attDate} onChange={(e) => setAttDate(e.target.value)} />
             <select value={attStatus} onChange={(e) => setAttStatus(e.target.value)}>
@@ -401,32 +521,46 @@ export default function App() {
               <option>Excused</option>
             </select>
             <input type="file" onChange={(e) => setAttFile(e.target.files?.[0] || null)} />
-            <button disabled={busy || !roles.teacher} onClick={onMarkAttendance}>Mark</button>
+            <button
+              disabled={busy || !roles.teacher || !ethers.isAddress(attStudentAddr || "") || !attCourseId || !attDate}
+              onClick={onMarkAttendance}
+            >
+              Mark
+            </button>
           </div>
 
           <div>
             <h3>Finalize Record</h3>
-            <input placeholder="studentAddress" value={issueStudentAddr} onChange={(e) => setIssueStudentAddr(e.target.value)} />
+            <input placeholder="studentAddress (0x…)" value={issueStudentAddr} onChange={(e) => setIssueStudentAddr(e.target.value)} />
             <input placeholder="courseId" value={issueCourseId} onChange={(e) => setIssueCourseId(e.target.value)} />
-            <button disabled={busy || !roles.registrar} onClick={onFinalize}>Finalize</button>
+            <div className="hint">Only registrar can finalize</div>
+            <button disabled={busy || !roles.registrar || !ethers.isAddress(issueStudentAddr || "") || !issueCourseId} onClick={onFinalize}>
+              Finalize
+            </button>
           </div>
         </div>
       </section>
 
       {/* Student */}
-      <section id="student" className="card">
+      <section id="student" className="card section">
         <h2>Student</h2>
+        <div className="divider" />
         <div className="grid">
           <div>
             <h3>View Grade</h3>
             <input placeholder="courseId" value={viewCourseId} onChange={(e) => setViewCourseId(e.target.value)} />
-            <button disabled={busy} onClick={onViewRecord}>Fetch</button>
+            <button disabled={busy || !viewCourseId} onClick={onViewRecord}>Fetch</button>
             {recordView && (
               <div className="box">
                 <div><b>Grade:</b> {recordView.grade}</div>
                 <div><b>Finalized:</b> {recordView.finalized ? "Yes" : "No"}</div>
                 {recordView.ipfsHash && (
-                  <div><a href={`https://ipfs.io/ipfs/${recordView.ipfsHash}`} target="_blank" rel="noreferrer">Transcript CID</a></div>
+                  <div className="cid">
+                    <span className="mono">{recordView.ipfsHash}</span>
+                    <button className="copy" onClick={() => navigator.clipboard.writeText(recordView.ipfsHash)}>Copy CID</button>
+                    <a href={`${LOCAL_GATEWAY}${recordView.ipfsHash}`} target="_blank" rel="noreferrer">Local</a>
+                    <a href={`https://ipfs.io/ipfs/${recordView.ipfsHash}`} target="_blank" rel="noreferrer">Public</a>
+                  </div>
                 )}
               </div>
             )}
@@ -435,16 +569,21 @@ export default function App() {
           <div>
             <h3>View Attendance</h3>
             <input placeholder="courseId" value={viewCourseId} onChange={(e) => setViewCourseId(e.target.value)} />
-            <button disabled={busy} onClick={onViewAttendance}>Fetch</button>
+            <button disabled={busy || !viewCourseId} onClick={onViewAttendance}>Fetch</button>
             {attendanceView?.length > 0 && (
-              <table className="table">
+              <table className="table zebra">
                 <thead><tr><th>Date (UTC)</th><th>Status</th><th>Proof</th></tr></thead>
                 <tbody>
                   {attendanceView.map((e, i) => (
                     <tr key={i}>
                       <td>{new Date(Number(e.date) * 1000).toISOString().slice(0, 10)}</td>
                       <td>{["Present", "Absent", "Excused"][Number(e.status)]}</td>
-                      <td>{e.ipfsHash ? <a href={`https://ipfs.io/ipfs/${e.ipfsHash}`} target="_blank" rel="noreferrer">CID</a> : "-"}</td>
+                      <td>{e.ipfsHash ? (
+                        <div className="cid">
+                          <a href={`${LOCAL_GATEWAY}${e.ipfsHash}`} target="_blank" rel="noreferrer">Local</a>
+                          <a href={`https://ipfs.io/ipfs/${e.ipfsHash}`} target="_blank" rel="noreferrer">Public</a>
+                        </div>
+                      ) : "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -455,21 +594,27 @@ export default function App() {
       </section>
 
       {/* Verifier */}
-      <section id="verifier" className="card">
+      <section id="verifier" className="card section">
         <h2>Verifier</h2>
+        <div className="divider" />
         <div className="grid">
           <div>
             <h3>Verify Transcript (pay exact fee)</h3>
-            <input placeholder="studentAddress" value={verStudentAddr} onChange={(e) => setVerStudentAddr(e.target.value)} />
+            <input placeholder="studentAddress (0x…)" value={verStudentAddr} onChange={(e) => setVerStudentAddr(e.target.value)} />
             <input placeholder="courseId" value={verCourseId} onChange={(e) => setVerCourseId(e.target.value)} />
-            <div className="row small">Current fee: {ethers.formatEther(feeWei)} ETH</div>
-            <button disabled={busy} onClick={onVerify}>Verify</button>
+            <div className="row small">Current fee: <b>{feeEth}</b> ETH</div>
+            <button disabled={busy || !ethers.isAddress(verStudentAddr || "") || !verCourseId} onClick={onVerify}>Verify</button>
             {verifyResult && (
               <div className="box">
                 <div><b>Grade:</b> {verifyResult.grade}</div>
                 <div><b>Finalized:</b> {verifyResult.finalized ? "Yes" : "No"}</div>
                 {verifyResult.ipfsHash && (
-                  <div><a href={`https://ipfs.io/ipfs/${verifyResult.ipfsHash}`} target="_blank" rel="noreferrer">Transcript CID</a></div>
+                  <div className="cid">
+                    <span className="mono">{verifyResult.ipfsHash}</span>
+                    <button className="copy" onClick={() => navigator.clipboard.writeText(verifyResult.ipfsHash)}>Copy CID</button>
+                    <a href={`${LOCAL_GATEWAY}${verifyResult.ipfsHash}`} target="_blank" rel="noreferrer">Local</a>
+                    <a href={`https://ipfs.io/ipfs/${verifyResult.ipfsHash}`} target="_blank" rel="noreferrer">Public</a>
+                  </div>
                 )}
               </div>
             )}
