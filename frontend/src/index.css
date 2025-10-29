@@ -1,23 +1,277 @@
-/* src/index.css */
-/* ──────────────  Minimal styles; no Tailwind to keep files small. */
-:root { font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif; color-scheme: light dark; }
-body { margin: 0; background: #0b0b0c; color: #e8e8ea; }
-.container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
-.card { background: #141418; border: 1px solid #282833; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-.row { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.small { font-size: 0.9rem; opacity: 0.9; }
-.center { text-align: center; }
-button { background: #3b82f6; color: white; border: 0; padding: 10px 14px; border-radius: 8px; cursor: pointer; }
-button[disabled] { opacity: 0.5; cursor: not-allowed; }
-input, select { width: 100%; margin: 6px 0; padding: 10px; border-radius: 8px; border: 1px solid #2a2a35; background: #0f0f14; color: #e8e8ea; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-h1, h2, h3 { margin: 6px 0 8px; }
-.pill { border: 1px solid #2a2a35; padding: 4px 10px; border-radius: 999px; }
-.pill.ok { background: #16a34a33; border-color: #16a34a; }
-.box { border: 1px dashed #2a2a35; border-radius: 8px; padding: 8px; margin-top: 8px; }
-.table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-.table th, .table td { border-bottom: 1px solid #2a2a35; padding: 6px 8px; text-align: left; }
-.error { margin-top: 8px; color: #fca5a5; }
-.pending { color: #eab308; }
-.success { color: #86efac; }
-.reverted, .error { color: #f87171; }
+/* ===========================================================
+   PowerSchool DApp — Light Theme
+   Author: Phillip Gudov
+   Description: Clean white interface with subtle blue accents
+   =========================================================== */
+
+/* ---------- Global resets ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  background-color: #ffffff;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #111111;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Root theme variables ---------- */
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --accent: #3b82f6;
+  --ok: #16a34a;
+  --warn: #f59e0b;
+  --err: #dc2626;
+
+  --border: #e5e7eb;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-muted: #f9fafb;
+  --text-muted: #6b7280;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- Layout ---------- */
+.container {
+  max-width: 1100px;
+  margin: 24px auto 100px;
+  padding: 0 16px;
+}
+
+header.card {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+/* ---------- Card structure ---------- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* ---------- Headings ---------- */
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 12px 0 8px;
+  color: var(--text-muted);
+}
+
+/* ---------- Typography ---------- */
+p, span, label {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.small {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ---------- Rows / layout helpers ---------- */
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.row.small {
+  font-size: 13px;
+}
+
+.row.small.success {
+  color: var(--ok);
+}
+.row.small.reverted,
+.row.small.error {
+  color: var(--err);
+}
+.row.small.pending {
+  color: var(--warn);
+}
+
+/* ---------- Grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Pills ---------- */
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #334155;
+  border: 1px solid #dbeafe;
+}
+
+.pill.ok {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #bbf7d0;
+}
+
+/* ---------- Inputs ---------- */
+input,
+select,
+textarea {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: #111111;
+  transition: border-color 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+input[type="file"] {
+  padding: 6px;
+  height: auto;
+  background: var(--bg-muted);
+  border: 1px dashed var(--border);
+}
+
+/* ---------- Buttons ---------- */
+button {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+button:hover:not([disabled]) {
+  background: var(--primary-hover);
+}
+
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: #e5e7eb;
+  color: #111111;
+}
+
+/* ---------- Tables ---------- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+  background: #ffffff;
+}
+
+.table th {
+  background: var(--bg-muted);
+  font-weight: 600;
+}
+
+/* ---------- Box / Results ---------- */
+.box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  margin-top: 10px;
+}
+
+.box b {
+  color: #111111;
+}
+
+/* ---------- Error / Messages ---------- */
+.error {
+  margin-top: 8px;
+  color: var(--err);
+  font-weight: 600;
+}
+
+/* ---------- Links ---------- */
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Footer ---------- */
+footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 40px;
+}
+
+/* ---------- Utility ---------- */
+.center {
+  text-align: center;
+}
+
+.success {
+  color: var(--ok);
+}
+.pending {
+  color: var(--warn);
+}
+.failed,
+.error {
+  color: var(--err);
+}
