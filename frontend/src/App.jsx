@@ -1,24 +1,27 @@
-// src/App.jsx
-// ────────────
-import { useEffect, useMemo, useRef, useState } from "react";
+// frontend/src/App.jsx
+// ──────────────────────────────────────────────────────────
+// Single-page PowerSchool DApp UI (Registrar/Teacher/Student/Verifier)
+// Works with ethers v6, MetaMask, Ganache, and IPFS (Kubo)
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
 import { create as createIpfsClient } from "ipfs-http-client";
 import abi from "./abi.json";
 import "./index.css";
 
-// Small helpers inside the one file to keep structure tiny.
-const STATUS = { Present: 0, Absent: 1, Excused: 2 };
-
 export default function App() {
-  // ── ENV & singletons
-  const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS; // required
+  // ────────────────────────────── ENV / singletons
+  const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
   const IPFS_API = import.meta.env.VITE_IPFS_API || "http://127.0.0.1:5001";
+
   const providerRef = useRef(null);
   const signerRef = useRef(null);
   const contractRef = useRef(null);
+
+  // ────────────────────────────── IPFS
   const [ipfs, setIpfs] = useState(null);
 
-  // ── UI state
+  // ────────────────────────────── Session/UI state
   const [account, setAccount] = useState("");
   const [roles, setRoles] = useState({ registrar: false, teacher: false });
   const [feeWei, setFeeWei] = useState("0");
@@ -31,6 +34,7 @@ export default function App() {
   const [courseId, setCourseId] = useState("");
   const [courseName, setCourseName] = useState("");
   const [teacherAddr, setTeacherAddr] = useState("");
+
   const [studentAddr, setStudentAddr] = useState("");
   const [enrollCourseId, setEnrollCourseId] = useState("");
   const [newFeeEth, setNewFeeEth] = useState("");
@@ -49,15 +53,15 @@ export default function App() {
 
   // Student viewer
   const [viewCourseId, setViewCourseId] = useState("");
-  const [viewRecord, setViewRecord] = useState(null);
-  const [viewAttendance, setViewAttendance] = useState([]);
+  const [recordView, setRecordView] = useState(null);
+  const [attendanceView, setAttendanceView] = useState([]);
 
   // Verifier
   const [verStudentAddr, setVerStudentAddr] = useState("");
   const [verCourseId, setVerCourseId] = useState("");
   const [verifyResult, setVerifyResult] = useState(null);
 
-  // precomputed role IDs
+  // Role ids (keccak256 of role strings)
   const REGISTRAR_ROLE = useMemo(
     () => ethers.keccak256(ethers.toUtf8Bytes("REGISTRAR_ROLE")),
     []
@@ -67,39 +71,60 @@ export default function App() {
     []
   );
 
-  // ── initialize IPFS client
+  // Attendance mapping UI → enum
+  const STATUS = { Present: 0, Absent: 1, Excused: 2 };
+
+  // ────────────────────────────── Init IPFS (once)
   useEffect(() => {
     try {
       setIpfs(createIpfsClient({ url: IPFS_API }));
     } catch (e) {
-      console.warn("IPFS client init error", e);
+      console.warn("IPFS init failed:", e);
+      setError("Failed to create IPFS client. Check VITE_IPFS_API.");
     }
   }, [IPFS_API]);
 
-  // ── connect Metamask + contract
-  const ensureConnected = async () => {
-    if (!window.ethereum) throw new Error("MetaMask not found");
+  // ────────────────────────────── Connect wallet + contract
+  const connect = async () => {
+    setError("");
+    if (!window.ethereum) {
+      setError("MetaMask not found. Install it and reload.");
+      return;
+    }
+    if (!CONTRACT_ADDRESS) {
+      setError("VITE_CONTRACT_ADDRESS is missing in frontend/.env");
+      return;
+    }
+
+    // Request accounts and set signer
     const provider = new ethers.BrowserProvider(window.ethereum);
     providerRef.current = provider;
+
     const [addr] = await window.ethereum.request({ method: "eth_requestAccounts" });
     setAccount(addr);
-    signerRef.current = await provider.getSigner();
-    if (!CONTRACT_ADDRESS) throw new Error("VITE_CONTRACT_ADDRESS not set");
-    contractRef.current = new ethers.Contract(CONTRACT_ADDRESS, abi, signerRef.current);
-    await refreshBasics();
+
+    const signer = await provider.getSigner();
+    signerRef.current = signer;
+
+    // Contract instance
+    contractRef.current = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+
+    // Load basics
+    await refreshBasics(addr);
   };
 
-  // ── refresh roles, fee, balance
-  const refreshBasics = async () => {
-    setError("");
+  // ────────────────────────────── Refresh roles, fee, balance
+  const refreshBasics = async (addrOverride) => {
     try {
-      if (!providerRef.current || !contractRef.current) return;
       const c = contractRef.current;
+      const provider = providerRef.current;
+      const addr = addrOverride || account;
+      if (!c || !provider || !addr) return;
 
-      // roles
+      // hasRole checks
       const [isReg, isTeach] = await Promise.all([
-        c.hasRole(REGISTRAR_ROLE, account),
-        c.hasRole(TEACHER_ROLE, account),
+        c.hasRole(REGISTRAR_ROLE, addr),
+        c.hasRole(TEACHER_ROLE, addr),
       ]);
       setRoles({ registrar: isReg, teacher: isTeach });
 
@@ -107,18 +132,18 @@ export default function App() {
       const fee = await c.verificationFee();
       setFeeWei(fee.toString());
 
-      const bal = await providerRef.current.getBalance(CONTRACT_ADDRESS);
+      const bal = await provider.getBalance(CONTRACT_ADDRESS);
       setContractBalance(ethers.formatEther(bal));
     } catch (e) {
-      setError(e.message);
+      setError(e.shortMessage || e.message);
     }
   };
 
-  // react to account or network changes
+  // React to account / chain changes
   useEffect(() => {
     if (!window.ethereum) return;
-    const onAcc = () => ensureConnected().catch(setError);
-    const onChain = () => ensureConnected().catch(setError);
+    const onAcc = () => connect().catch((e) => setError(e.message));
+    const onChain = () => connect().catch((e) => setError(e.message));
     window.ethereum.on?.("accountsChanged", onAcc);
     window.ethereum.on?.("chainChanged", onChain);
     return () => {
@@ -127,13 +152,13 @@ export default function App() {
     };
   }, []);
 
-  // one-shot connect on mount
+  // Auto-connect on mount
   useEffect(() => {
-    ensureConnected().catch(setError);
+    connect().catch((e) => setError(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── utils
+  // ────────────────────────────── Helpers
   const runTx = async (fn) => {
     setBusy(true);
     setError("");
@@ -154,43 +179,44 @@ export default function App() {
 
   const uploadToIPFS = async (file) => {
     if (!file || !ipfs) return "";
-    const added = await ipfs.add(file);
-    return added.cid?.toString() || "";
+    const res = await ipfs.add(file);
+    return res?.cid?.toString() || "";
   };
 
-  // ── Registrar actions
+  // ────────────────────────────── Registrar actions
   const onAddCourse = () =>
-    runTx(async () => contractRef.current.addCourse(
-      BigInt(courseId),
-      courseName,
-      teacherAddr
-    ));
+    runTx(() =>
+      contractRef.current.addCourse(
+        BigInt(courseId || "0"),
+        courseName || "",
+        teacherAddr || ethers.ZeroAddress
+      )
+    );
 
   const onRegisterStudent = () =>
-    runTx(async () => contractRef.current.registerStudent(studentAddr));
+    runTx(() => contractRef.current.registerStudent(studentAddr || ethers.ZeroAddress));
 
   const onEnroll = () =>
-    runTx(async () => contractRef.current.enrollInCourse(
-      studentAddr, BigInt(enrollCourseId)
-    ));
+    runTx(() =>
+      contractRef.current.enrollInCourse(
+        studentAddr || ethers.ZeroAddress,
+        BigInt(enrollCourseId || "0")
+      )
+    );
 
   const onSetFee = () =>
-    runTx(async () => {
-      // newFeeEth string → wei bigint
-      const wei = ethers.parseEther(newFeeEth || "0");
-      return contractRef.current.setVerificationFee(wei);
-    });
+    runTx(() => contractRef.current.setVerificationFee(ethers.parseEther(newFeeEth || "0")));
 
-  const onWithdraw = () => runTx(async () => contractRef.current.withdrawFees());
+  const onWithdraw = () => runTx(() => contractRef.current.withdrawFees());
 
-  // ── Teacher actions
+  // ────────────────────────────── Teacher actions
   const onIssueGrade = async () => {
     const ipfsHash = await uploadToIPFS(gradeFile);
-    return runTx(async () =>
+    return runTx(() =>
       contractRef.current.issueGrade(
-        issueStudentAddr,
-        BigInt(issueCourseId),
-        grade,
+        issueStudentAddr || ethers.ZeroAddress,
+        BigInt(issueCourseId || "0"),
+        grade || "",
         ipfsHash
       )
     );
@@ -198,182 +224,199 @@ export default function App() {
 
   const onMarkAttendance = async () => {
     const ipfsHash = await uploadToIPFS(attFile);
-    // convert yyyy-mm-dd to UTC midnight timestamp
-    const ts = attDate ? Math.floor(new Date(attDate + "T00:00:00Z").getTime() / 1000) : 0;
-    const statusVal = STATUS[attStatus] ?? 0;
-    return runTx(async () =>
+    const ts = attDate ? Math.floor(new Date(`${attDate}T00:00:00Z`).getTime() / 1000) : 0;
+    return runTx(() =>
       contractRef.current.markAttendance(
-        attStudentAddr,
-        BigInt(attCourseId),
+        attStudentAddr || ethers.ZeroAddress,
+        BigInt(attCourseId || "0"),
         BigInt(ts),
-        statusVal,
+        STATUS[attStatus] ?? 0,
         ipfsHash
       )
     );
   };
 
   const onFinalize = () =>
-    runTx(async () =>
-      contractRef.current.finalizeRecord(issueStudentAddr, BigInt(issueCourseId))
+    runTx(() =>
+      contractRef.current.finalizeRecord(
+        issueStudentAddr || ethers.ZeroAddress,
+        BigInt(issueCourseId || "0")
+      )
     );
 
-  // ── Student views
+  // ────────────────────────────── Student views
   const onViewRecord = async () => {
     setError("");
-    setViewRecord(null);
+    setRecordView(null);
     try {
-      const rec = await contractRef.current.viewRecord(account || studentAddr, BigInt(viewCourseId));
-      setViewRecord(rec);
+      const rec = await contractRef.current.viewRecord(
+        account || studentAddr || ethers.ZeroAddress,
+        BigInt(viewCourseId || "0")
+      );
+      setRecordView(rec);
     } catch (e) {
-      setError(e.message);
+      setError(e.shortMessage || e.message);
     }
   };
 
   const onViewAttendance = async () => {
     setError("");
-    setViewAttendance([]);
+    setAttendanceView([]);
     try {
-      const arr = await contractRef.current.viewAttendance(account || studentAddr, BigInt(viewCourseId));
-      setViewAttendance(arr);
+      const rows = await contractRef.current.viewAttendance(
+        account || studentAddr || ethers.ZeroAddress,
+        BigInt(viewCourseId || "0")
+      );
+      setAttendanceView(rows);
     } catch (e) {
-      setError(e.message);
+      setError(e.shortMessage || e.message);
     }
   };
 
-  // ── Verifier
+  // ────────────────────────────── Verifier
   const onVerify = async () => {
+    setError("");
     setVerifyResult(null);
     try {
       const fee = await contractRef.current.verificationFee();
       const tx = await contractRef.current.verifyTranscript(
-        verStudentAddr, BigInt(verCourseId), { value: fee }
+        verStudentAddr || ethers.ZeroAddress,
+        BigInt(verCourseId || "0"),
+        { value: fee }
       );
       const receipt = await tx.wait();
       setLastTx({ hash: receipt.hash, status: receipt.status === 1 ? "success" : "reverted" });
-      // read again to display snapshot
-      const rec = await contractRef.current.viewRecord(verStudentAddr, BigInt(verCourseId));
+      const rec = await contractRef.current.viewRecord(
+        verStudentAddr || ethers.ZeroAddress,
+        BigInt(verCourseId || "0")
+      );
       setVerifyResult(rec);
       await refreshBasics();
     } catch (e) {
       setError(e.shortMessage || e.message);
-      setLastTx((t) => ({ ...t, status: "error" }));
     }
   };
 
-  // ── render
+  // ────────────────────────────── Render
   return (
     <div className="container">
       <header className="card">
         <div className="row">
           <h1>PowerSchool DApp</h1>
-          <button disabled={busy} onClick={() => ensureConnected().catch(setError)}>
+          <button disabled={busy} onClick={() => connect().catch((e) => setError(e.message))}>
             {account ? `Connected: ${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet"}
           </button>
         </div>
+
         <div className="row small">
-          <span>Roles: </span>
+          <span>Roles:</span>
           <span className={roles.registrar ? "pill ok" : "pill"}>Registrar</span>
           <span className={roles.teacher ? "pill ok" : "pill"}>Teacher</span>
         </div>
+
         <div className="row small">
           <span>Verification Fee: {ethers.formatEther(feeWei)} ETH</span>
           <span>Contract Balance: {contractBalance} ETH</span>
         </div>
+
         {lastTx.hash && (
           <div className={`row small ${lastTx.status}`}>
             <span>Tx: {lastTx.hash}</span>
             <span>Status: {lastTx.status}</span>
           </div>
         )}
+
         {error && <div className="error">Error: {error}</div>}
       </header>
 
-      {/* Registrar Panel */}
+      {/* Registrar */}
       <section className="card">
         <h2>Registrar</h2>
         <div className="grid">
           <div>
             <h3>Add Course</h3>
-            <input placeholder="courseId" value={courseId} onChange={e=>setCourseId(e.target.value)} />
-            <input placeholder="courseName" value={courseName} onChange={e=>setCourseName(e.target.value)} />
-            <input placeholder="teacherAddress" value={teacherAddr} onChange={e=>setTeacherAddr(e.target.value)} />
+            <input placeholder="courseId" value={courseId} onChange={(e) => setCourseId(e.target.value)} />
+            <input placeholder="courseName" value={courseName} onChange={(e) => setCourseName(e.target.value)} />
+            <input placeholder="teacherAddress" value={teacherAddr} onChange={(e) => setTeacherAddr(e.target.value)} />
             <button disabled={busy || !roles.registrar} onClick={onAddCourse}>Add Course</button>
           </div>
 
           <div>
             <h3>Register Student</h3>
-            <input placeholder="studentAddress" value={studentAddr} onChange={e=>setStudentAddr(e.target.value)} />
+            <input placeholder="studentAddress" value={studentAddr} onChange={(e) => setStudentAddr(e.target.value)} />
             <button disabled={busy || !roles.registrar} onClick={onRegisterStudent}>Register</button>
           </div>
 
           <div>
             <h3>Enroll Student</h3>
-            <input placeholder="studentAddress" value={studentAddr} onChange={e=>setStudentAddr(e.target.value)} />
-            <input placeholder="courseId" value={enrollCourseId} onChange={e=>setEnrollCourseId(e.target.value)} />
+            <input placeholder="studentAddress" value={studentAddr} onChange={(e) => setStudentAddr(e.target.value)} />
+            <input placeholder="courseId" value={enrollCourseId} onChange={(e) => setEnrollCourseId(e.target.value)} />
             <button disabled={busy || !roles.registrar} onClick={onEnroll}>Enroll</button>
           </div>
 
           <div>
             <h3>Set Verification Fee</h3>
-            <input placeholder="fee (ETH)" value={newFeeEth} onChange={e=>setNewFeeEth(e.target.value)} />
+            <input placeholder="fee (ETH)" value={newFeeEth} onChange={(e) => setNewFeeEth(e.target.value)} />
             <button disabled={busy || !roles.registrar} onClick={onSetFee}>Set Fee</button>
           </div>
 
           <div>
-            <h3>Withdraw Contract Fees</h3>
+            <h3>Withdraw Fees</h3>
             <button disabled={busy || !roles.registrar} onClick={onWithdraw}>Withdraw</button>
           </div>
         </div>
       </section>
 
-      {/* Teacher Panel */}
+      {/* Teacher */}
       <section className="card">
         <h2>Teacher</h2>
         <div className="grid">
           <div>
             <h3>Issue Grade</h3>
-            <input placeholder="studentAddress" value={issueStudentAddr} onChange={e=>setIssueStudentAddr(e.target.value)} />
-            <input placeholder="courseId" value={issueCourseId} onChange={e=>setIssueCourseId(e.target.value)} />
-            <input placeholder="grade (e.g., A or 95%)" value={grade} onChange={e=>setGrade(e.target.value)} />
-            <input type="file" onChange={e=>setGradeFile(e.target.files?.[0] || null)} />
+            <input placeholder="studentAddress" value={issueStudentAddr} onChange={(e) => setIssueStudentAddr(e.target.value)} />
+            <input placeholder="courseId" value={issueCourseId} onChange={(e) => setIssueCourseId(e.target.value)} />
+            <input placeholder="grade (e.g., A or 95%)" value={grade} onChange={(e) => setGrade(e.target.value)} />
+            <input type="file" onChange={(e) => setGradeFile(e.target.files?.[0] || null)} />
             <button disabled={busy || !roles.teacher} onClick={onIssueGrade}>Issue</button>
           </div>
 
           <div>
             <h3>Mark Attendance</h3>
-            <input placeholder="studentAddress" value={attStudentAddr} onChange={e=>setAttStudentAddr(e.target.value)} />
-            <input placeholder="courseId" value={attCourseId} onChange={e=>setAttCourseId(e.target.value)} />
-            <input type="date" value={attDate} onChange={e=>setAttDate(e.target.value)} />
-            <select value={attStatus} onChange={e=>setAttStatus(e.target.value)}>
-              <option>Present</option><option>Absent</option><option>Excused</option>
+            <input placeholder="studentAddress" value={attStudentAddr} onChange={(e) => setAttStudentAddr(e.target.value)} />
+            <input placeholder="courseId" value={attCourseId} onChange={(e) => setAttCourseId(e.target.value)} />
+            <input type="date" value={attDate} onChange={(e) => setAttDate(e.target.value)} />
+            <select value={attStatus} onChange={(e) => setAttStatus(e.target.value)}>
+              <option>Present</option>
+              <option>Absent</option>
+              <option>Excused</option>
             </select>
-            <input type="file" onChange={e=>setAttFile(e.target.files?.[0] || null)} />
+            <input type="file" onChange={(e) => setAttFile(e.target.files?.[0] || null)} />
             <button disabled={busy || !roles.teacher} onClick={onMarkAttendance}>Mark</button>
           </div>
 
           <div>
             <h3>Finalize Record</h3>
-            <input placeholder="studentAddress" value={issueStudentAddr} onChange={e=>setIssueStudentAddr(e.target.value)} />
-            <input placeholder="courseId" value={issueCourseId} onChange={e=>setIssueCourseId(e.target.value)} />
+            <input placeholder="studentAddress" value={issueStudentAddr} onChange={(e) => setIssueStudentAddr(e.target.value)} />
+            <input placeholder="courseId" value={issueCourseId} onChange={(e) => setIssueCourseId(e.target.value)} />
             <button disabled={busy || !roles.registrar} onClick={onFinalize}>Finalize</button>
           </div>
         </div>
       </section>
 
-      {/* Student Panel */}
+      {/* Student */}
       <section className="card">
         <h2>Student</h2>
         <div className="grid">
           <div>
             <h3>View Grade</h3>
-            <input placeholder="courseId" value={viewCourseId} onChange={e=>setViewCourseId(e.target.value)} />
+            <input placeholder="courseId" value={viewCourseId} onChange={(e) => setViewCourseId(e.target.value)} />
             <button disabled={busy} onClick={onViewRecord}>Fetch</button>
-            {viewRecord && (
+            {recordView && (
               <div className="box">
-                <div><b>Grade:</b> {viewRecord.grade}</div>
-                <div><b>Finalized:</b> {viewRecord.finalized ? "Yes" : "No"}</div>
-                {viewRecord.ipfsHash && (
-                  <div><a href={`https://ipfs.io/ipfs/${viewRecord.ipfsHash}`} target="_blank">Transcript CID</a></div>
+                <div><b>Grade:</b> {recordView.grade}</div>
+                <div><b>Finalized:</b> {recordView.finalized ? "Yes" : "No"}</div>
+                {recordView.ipfsHash && (
+                  <div><a href={`https://ipfs.io/ipfs/${recordView.ipfsHash}`} target="_blank" rel="noreferrer">Transcript CID</a></div>
                 )}
               </div>
             )}
@@ -381,17 +424,17 @@ export default function App() {
 
           <div>
             <h3>View Attendance</h3>
-            <input placeholder="courseId" value={viewCourseId} onChange={e=>setViewCourseId(e.target.value)} />
+            <input placeholder="courseId" value={viewCourseId} onChange={(e) => setViewCourseId(e.target.value)} />
             <button disabled={busy} onClick={onViewAttendance}>Fetch</button>
-            {viewAttendance?.length > 0 && (
+            {attendanceView?.length > 0 && (
               <table className="table">
                 <thead><tr><th>Date (UTC)</th><th>Status</th><th>Proof</th></tr></thead>
                 <tbody>
-                  {viewAttendance.map((e, i) => (
+                  {attendanceView.map((e, i) => (
                     <tr key={i}>
-                      <td>{new Date(Number(e.date) * 1000).toISOString().slice(0,10)}</td>
-                      <td>{["Present","Absent","Excused"][Number(e.status)]}</td>
-                      <td>{e.ipfsHash ? <a href={`https://ipfs.io/ipfs/${e.ipfsHash}`} target="_blank">CID</a> : "-"}</td>
+                      <td>{new Date(Number(e.date) * 1000).toISOString().slice(0, 10)}</td>
+                      <td>{["Present", "Absent", "Excused"][Number(e.status)]}</td>
+                      <td>{e.ipfsHash ? <a href={`https://ipfs.io/ipfs/${e.ipfsHash}`} target="_blank" rel="noreferrer">CID</a> : "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -401,14 +444,14 @@ export default function App() {
         </div>
       </section>
 
-      {/* Verifier Panel */}
+      {/* Verifier */}
       <section className="card">
         <h2>Verifier</h2>
         <div className="grid">
           <div>
             <h3>Verify Transcript (pay exact fee)</h3>
-            <input placeholder="studentAddress" value={verStudentAddr} onChange={e=>setVerStudentAddr(e.target.value)} />
-            <input placeholder="courseId" value={verCourseId} onChange={e=>setVerCourseId(e.target.value)} />
+            <input placeholder="studentAddress" value={verStudentAddr} onChange={(e) => setVerStudentAddr(e.target.value)} />
+            <input placeholder="courseId" value={verCourseId} onChange={(e) => setVerCourseId(e.target.value)} />
             <div className="row small">Current fee: {ethers.formatEther(feeWei)} ETH</div>
             <button disabled={busy} onClick={onVerify}>Verify</button>
             {verifyResult && (
@@ -416,7 +459,7 @@ export default function App() {
                 <div><b>Grade:</b> {verifyResult.grade}</div>
                 <div><b>Finalized:</b> {verifyResult.finalized ? "Yes" : "No"}</div>
                 {verifyResult.ipfsHash && (
-                  <div><a href={`https://ipfs.io/ipfs/${verifyResult.ipfsHash}`} target="_blank">Transcript CID</a></div>
+                  <div><a href={`https://ipfs.io/ipfs/${verifyResult.ipfsHash}`} target="_blank" rel="noreferrer">Transcript CID</a></div>
                 )}
               </div>
             )}
