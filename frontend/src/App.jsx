@@ -1,5 +1,4 @@
 // frontend/src/App.jsx
-// ──────────────────────────────────────────────────────────
 // UpSchool Interface — single page DApp (Registrar / Teacher / Student / Verifier)
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -21,7 +20,12 @@ export default function App() {
   // state
   const [ipfs, setIpfs] = useState(null);
   const [account, setAccount] = useState("");
-  const [roles, setRoles] = useState({ registrar: false, teacher: false, student: false });
+  const [roles, setRoles] = useState({
+    registrar: false,
+    teacher: false,
+    student: false,
+    verifier: true, // anyone can verify (pays fee), so true by default
+  });
   const [feeWei, setFeeWei] = useState("0");
   const [contractBalance, setContractBalance] = useState("0");
   const [busy, setBusy] = useState(false);
@@ -70,7 +74,7 @@ export default function App() {
 
   const STATUS = { Present: 0, Absent: 1, Excused: 2 };
 
-  // ── init IPFS
+  // init IPFS
   useEffect(() => {
     try {
       setIpfs(createIpfsClient({ url: IPFS_API }));
@@ -80,7 +84,7 @@ export default function App() {
     }
   }, [IPFS_API]);
 
-  // ── wallet + contract
+  // wallet + contract
   const connect = async () => {
     setError("");
     if (!window.ethereum) return setError("MetaMask not found.");
@@ -100,7 +104,7 @@ export default function App() {
     await refreshBasics(addr);
   };
 
-  // ── load roles, fee, balance
+  // load roles, fee, balance
   const refreshBasics = async (addrOverride) => {
     try {
       const c = contractRef.current;
@@ -108,16 +112,20 @@ export default function App() {
       const addr = addrOverride || account;
       if (!c || !provider || !addr) return;
 
-      // Registrar/Teacher via AccessControl, Student via registeredStudents mapping
-      const [isReg, isTeach, isStudRaw, fee, balWei] = await Promise.all([
+      const [isReg, isTeach, isStud, fee, balWei] = await Promise.all([
         c.hasRole(REGISTRAR_ROLE, addr),
         c.hasRole(TEACHER_ROLE, addr),
-        c.registeredStudents(addr),
+        c.registeredStudents(addr), // student = registeredStudents mapping
         c.verificationFee(),
         provider.getBalance(CONTRACT_ADDRESS),
       ]);
 
-      setRoles({ registrar: Boolean(isReg), teacher: Boolean(isTeach), student: Boolean(isStudRaw) });
+      setRoles({
+        registrar: Boolean(isReg),
+        teacher: Boolean(isTeach),
+        student: Boolean(isStud),
+        verifier: true, // always allowed to verify (subject to fee)
+      });
       setFeeWei(fee.toString());
       setContractBalance(ethers.formatEther(balWei));
     } catch (e) {
@@ -143,7 +151,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── helpers
+  // helpers
   const runTx = async (fn) => {
     setBusy(true);
     setError("");
@@ -168,7 +176,12 @@ export default function App() {
     return res?.cid?.toString() || "";
   };
 
-  // ── Registrar
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Registrar
   const onAddCourse = () =>
     runTx(() =>
       contractRef.current.addCourse(
@@ -194,7 +207,7 @@ export default function App() {
 
   const onWithdraw = () => runTx(() => contractRef.current.withdrawFees());
 
-  // ── Teacher
+  // Teacher
   const onIssueGrade = async () => {
     const ipfsHash = await uploadToIPFS(gradeFile);
     return runTx(() =>
@@ -215,7 +228,7 @@ export default function App() {
         attStudentAddr || ethers.ZeroAddress,
         BigInt(attCourseId || "0"),
         BigInt(ts),
-        STATUS[attStatus] ?? 0,
+        { Present: 0, Absent: 1, Excused: 2 }[attStatus] ?? 0,
         ipfsHash
       )
     );
@@ -229,7 +242,7 @@ export default function App() {
       )
     );
 
-  // ── Student views
+  // Student views
   const onViewRecord = async () => {
     setError("");
     setRecordView(null);
@@ -258,7 +271,7 @@ export default function App() {
     }
   };
 
-  // ── Verifier
+  // Verifier
   const onVerify = async () => {
     setError("");
     setVerifyResult(null);
@@ -282,7 +295,7 @@ export default function App() {
     }
   };
 
-  // ── UI
+  // UI
   return (
     <div className="container">
       <header className="card">
@@ -298,9 +311,18 @@ export default function App() {
 
         <div className="row small">
           <span>Roles:</span>
-          <span className={`pill ${roles.registrar ? "ok" : ""}`}>Registrar</span>
-          <span className={`pill ${roles.teacher ? "ok" : ""}`}>Teacher</span>
-          <span className={`pill ${roles.student ? "ok" : ""}`}>Student</span>
+          <button className={`pill link ${roles.registrar ? "ok" : ""}`} onClick={() => scrollTo("registrar")}>
+            Registrar
+          </button>
+          <button className={`pill link ${roles.teacher ? "ok" : ""}`} onClick={() => scrollTo("teacher")}>
+            Teacher
+          </button>
+          <button className={`pill link ${roles.student ? "ok" : ""}`} onClick={() => scrollTo("student")}>
+            Student
+          </button>
+          <button className={`pill link ${roles.verifier ? "ok" : ""}`} onClick={() => scrollTo("verifier")}>
+            Verifier
+          </button>
         </div>
 
         <div className="row small">
@@ -318,7 +340,7 @@ export default function App() {
       </header>
 
       {/* Registrar */}
-      <section className="card">
+      <section id="registrar" className="card">
         <h2>Registrar</h2>
         <div className="grid">
           <div>
@@ -356,7 +378,7 @@ export default function App() {
       </section>
 
       {/* Teacher */}
-      <section className="card">
+      <section id="teacher" className="card">
         <h2>Teacher</h2>
         <div className="grid">
           <div>
@@ -392,7 +414,7 @@ export default function App() {
       </section>
 
       {/* Student */}
-      <section className="card">
+      <section id="student" className="card">
         <h2>Student</h2>
         <div className="grid">
           <div>
@@ -433,7 +455,7 @@ export default function App() {
       </section>
 
       {/* Verifier */}
-      <section className="card">
+      <section id="verifier" className="card">
         <h2>Verifier</h2>
         <div className="grid">
           <div>
@@ -455,7 +477,7 @@ export default function App() {
         </div>
       </section>
 
-      <footer className="small center">© UpSchool • Phillip Gudov, Zachary James, Tai Pham</footer>
+      <footer className="small center">Local-only demo • Ganache 1337 • IPFS Kubo</footer>
     </div>
   );
 }
