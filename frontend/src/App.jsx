@@ -1,7 +1,6 @@
 // frontend/src/App.jsx
 // ──────────────────────────────────────────────────────────
-// Single-page PowerSchool DApp UI (Registrar/Teacher/Student/Verifier)
-// Works with ethers v6, MetaMask, Ganache, and IPFS (Kubo)
+// UpSchool Interface — single page DApp (Registrar / Teacher / Student / Verifier)
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
@@ -10,20 +9,19 @@ import abi from "./abi.json";
 import "./index.css";
 
 export default function App() {
-  // ────────────────────────────── ENV / singletons
+  // ENV
   const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
   const IPFS_API = import.meta.env.VITE_IPFS_API || "http://127.0.0.1:5001";
 
+  // singletons
   const providerRef = useRef(null);
   const signerRef = useRef(null);
   const contractRef = useRef(null);
 
-  // ────────────────────────────── IPFS
+  // state
   const [ipfs, setIpfs] = useState(null);
-
-  // ────────────────────────────── Session/UI state
   const [account, setAccount] = useState("");
-  const [roles, setRoles] = useState({ registrar: false, teacher: false });
+  const [roles, setRoles] = useState({ registrar: false, teacher: false, student: false });
   const [feeWei, setFeeWei] = useState("0");
   const [contractBalance, setContractBalance] = useState("0");
   const [busy, setBusy] = useState(false);
@@ -34,7 +32,6 @@ export default function App() {
   const [courseId, setCourseId] = useState("");
   const [courseName, setCourseName] = useState("");
   const [teacherAddr, setTeacherAddr] = useState("");
-
   const [studentAddr, setStudentAddr] = useState("");
   const [enrollCourseId, setEnrollCourseId] = useState("");
   const [newFeeEth, setNewFeeEth] = useState("");
@@ -51,7 +48,7 @@ export default function App() {
   const [attStatus, setAttStatus] = useState("Present");
   const [attFile, setAttFile] = useState(null);
 
-  // Student viewer
+  // Student views
   const [viewCourseId, setViewCourseId] = useState("");
   const [recordView, setRecordView] = useState(null);
   const [attendanceView, setAttendanceView] = useState([]);
@@ -61,7 +58,7 @@ export default function App() {
   const [verCourseId, setVerCourseId] = useState("");
   const [verifyResult, setVerifyResult] = useState(null);
 
-  // Role ids (keccak256 of role strings)
+  // role ids
   const REGISTRAR_ROLE = useMemo(
     () => ethers.keccak256(ethers.toUtf8Bytes("REGISTRAR_ROLE")),
     []
@@ -71,10 +68,9 @@ export default function App() {
     []
   );
 
-  // Attendance mapping UI → enum
   const STATUS = { Present: 0, Absent: 1, Excused: 2 };
 
-  // ────────────────────────────── Init IPFS (once)
+  // ── init IPFS
   useEffect(() => {
     try {
       setIpfs(createIpfsClient({ url: IPFS_API }));
@@ -84,19 +80,12 @@ export default function App() {
     }
   }, [IPFS_API]);
 
-  // ────────────────────────────── Connect wallet + contract
+  // ── wallet + contract
   const connect = async () => {
     setError("");
-    if (!window.ethereum) {
-      setError("MetaMask not found. Install it and reload.");
-      return;
-    }
-    if (!CONTRACT_ADDRESS) {
-      setError("VITE_CONTRACT_ADDRESS is missing in frontend/.env");
-      return;
-    }
+    if (!window.ethereum) return setError("MetaMask not found.");
+    if (!CONTRACT_ADDRESS) return setError("VITE_CONTRACT_ADDRESS missing in .env");
 
-    // Request accounts and set signer
     const provider = new ethers.BrowserProvider(window.ethereum);
     providerRef.current = provider;
 
@@ -106,14 +95,12 @@ export default function App() {
     const signer = await provider.getSigner();
     signerRef.current = signer;
 
-    // Contract instance
     contractRef.current = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
 
-    // Load basics
     await refreshBasics(addr);
   };
 
-  // ────────────────────────────── Refresh roles, fee, balance
+  // ── load roles, fee, balance
   const refreshBasics = async (addrOverride) => {
     try {
       const c = contractRef.current;
@@ -121,44 +108,42 @@ export default function App() {
       const addr = addrOverride || account;
       if (!c || !provider || !addr) return;
 
-      // hasRole checks
-      const [isReg, isTeach] = await Promise.all([
+      // Registrar/Teacher via AccessControl, Student via registeredStudents mapping
+      const [isReg, isTeach, isStudRaw, fee, balWei] = await Promise.all([
         c.hasRole(REGISTRAR_ROLE, addr),
         c.hasRole(TEACHER_ROLE, addr),
+        c.registeredStudents(addr),
+        c.verificationFee(),
+        provider.getBalance(CONTRACT_ADDRESS),
       ]);
-      setRoles({ registrar: isReg, teacher: isTeach });
 
-      // fee + contract balance
-      const fee = await c.verificationFee();
+      setRoles({ registrar: Boolean(isReg), teacher: Boolean(isTeach), student: Boolean(isStudRaw) });
       setFeeWei(fee.toString());
-
-      const bal = await provider.getBalance(CONTRACT_ADDRESS);
-      setContractBalance(ethers.formatEther(bal));
+      setContractBalance(ethers.formatEther(balWei));
     } catch (e) {
       setError(e.shortMessage || e.message);
     }
   };
 
-  // React to account / chain changes
+  // react to account/chain changes
   useEffect(() => {
     if (!window.ethereum) return;
-    const onAcc = () => connect().catch((e) => setError(e.message));
-    const onChain = () => connect().catch((e) => setError(e.message));
-    window.ethereum.on?.("accountsChanged", onAcc);
-    window.ethereum.on?.("chainChanged", onChain);
+    const handler = () => connect().catch((e) => setError(e.message));
+    window.ethereum.on?.("accountsChanged", handler);
+    window.ethereum.on?.("chainChanged", handler);
     return () => {
-      window.ethereum.removeListener?.("accountsChanged", onAcc);
-      window.ethereum.removeListener?.("chainChanged", onChain);
+      window.ethereum.removeListener?.("accountsChanged", handler);
+      window.ethereum.removeListener?.("chainChanged", handler);
     };
   }, []);
 
-  // Auto-connect on mount
+  // auto-connect
   useEffect(() => {
     connect().catch((e) => setError(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ────────────────────────────── Helpers
+  // ── helpers
   const runTx = async (fn) => {
     setBusy(true);
     setError("");
@@ -166,8 +151,8 @@ export default function App() {
     try {
       const tx = await fn();
       setLastTx({ hash: tx.hash, status: "pending" });
-      const receipt = await tx.wait();
-      setLastTx({ hash: receipt.hash, status: receipt.status === 1 ? "success" : "reverted" });
+      const rc = await tx.wait();
+      setLastTx({ hash: rc.hash, status: rc.status === 1 ? "success" : "reverted" });
       await refreshBasics();
     } catch (e) {
       setError(e.shortMessage || e.message);
@@ -183,7 +168,7 @@ export default function App() {
     return res?.cid?.toString() || "";
   };
 
-  // ────────────────────────────── Registrar actions
+  // ── Registrar
   const onAddCourse = () =>
     runTx(() =>
       contractRef.current.addCourse(
@@ -209,7 +194,7 @@ export default function App() {
 
   const onWithdraw = () => runTx(() => contractRef.current.withdrawFees());
 
-  // ────────────────────────────── Teacher actions
+  // ── Teacher
   const onIssueGrade = async () => {
     const ipfsHash = await uploadToIPFS(gradeFile);
     return runTx(() =>
@@ -244,7 +229,7 @@ export default function App() {
       )
     );
 
-  // ────────────────────────────── Student views
+  // ── Student views
   const onViewRecord = async () => {
     setError("");
     setRecordView(null);
@@ -273,7 +258,7 @@ export default function App() {
     }
   };
 
-  // ────────────────────────────── Verifier
+  // ── Verifier
   const onVerify = async () => {
     setError("");
     setVerifyResult(null);
@@ -284,8 +269,8 @@ export default function App() {
         BigInt(verCourseId || "0"),
         { value: fee }
       );
-      const receipt = await tx.wait();
-      setLastTx({ hash: receipt.hash, status: receipt.status === 1 ? "success" : "reverted" });
+      const rc = await tx.wait();
+      setLastTx({ hash: rc.hash, status: rc.status === 1 ? "success" : "reverted" });
       const rec = await contractRef.current.viewRecord(
         verStudentAddr || ethers.ZeroAddress,
         BigInt(verCourseId || "0")
@@ -297,17 +282,15 @@ export default function App() {
     }
   };
 
-  // ────────────────────────────── Render
+  // ── UI
   return (
     <div className="container">
       <header className="card">
         <div className="row">
-          <img
-  src="/logo.png"
-  alt="UpSchool Logo"
-  style={{ height: "64px", marginBottom: "8px" }}
-/>
-<h1>UpSchool Interface</h1>
+          <div>
+            <img src="/logo.png" alt="UpSchool" style={{ height: 40, verticalAlign: "middle", marginRight: 10 }} />
+            <h1 style={{ display: "inline-block", margin: 0 }}>UpSchool Interface</h1>
+          </div>
           <button disabled={busy} onClick={() => connect().catch((e) => setError(e.message))}>
             {account ? `Connected: ${account.slice(0, 6)}…${account.slice(-4)}` : "Connect Wallet"}
           </button>
@@ -315,8 +298,9 @@ export default function App() {
 
         <div className="row small">
           <span>Roles:</span>
-          <span className={roles.registrar ? "pill ok" : "pill"}>Registrar</span>
-          <span className={roles.teacher ? "pill ok" : "pill"}>Teacher</span>
+          <span className={`pill ${roles.registrar ? "ok" : ""}`}>Registrar</span>
+          <span className={`pill ${roles.teacher ? "ok" : ""}`}>Teacher</span>
+          <span className={`pill ${roles.student ? "ok" : ""}`}>Student</span>
         </div>
 
         <div className="row small">
@@ -330,7 +314,6 @@ export default function App() {
             <span>Status: {lastTx.status}</span>
           </div>
         )}
-
         {error && <div className="error">Error: {error}</div>}
       </header>
 
@@ -472,7 +455,7 @@ export default function App() {
         </div>
       </section>
 
-      <footer className="small center">Local-only demo • Ganache 1337 • IPFS Kubo</footer>
+      <footer className="small center">© UpSchool • Phillip Gudov, Zachary James, Tai Pham</footer>
     </div>
   );
 }

@@ -1,277 +1,149 @@
-/* ===========================================================
-   PowerSchool DApp — Light Theme
-   Author: Phillip Gudov
-   Description: Clean white interface with subtle blue accents
-   =========================================================== */
+/* frontend/src/index.css */
+/* UpSchool light theme — white background, clean cards, role pills with "active" state */
 
-/* ---------- Global resets ---------- */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body, #root {
-  height: 100%;
-  background-color: #ffffff;
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  color: #111111;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ---------- Root theme variables ---------- */
+/* Tokens */
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --accent: #3b82f6;
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #666666;
+
+  --card: #ffffff;
+  --card-border: #e5e7eb;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+
+  --primary: #2563eb;        /* buttons */
+  --primary-ink: #ffffff;
+
   --ok: #16a34a;
   --warn: #f59e0b;
   --err: #dc2626;
 
-  --border: #e5e7eb;
-  --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --bg-muted: #f9fafb;
-  --text-muted: #6b7280;
-  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --pill: #eef2ff;
+  --pill-ink: #334155;
+  --pill-border: #dbeafe;
+  --pill-ok: #ecfdf5;
+  --pill-ok-ink: #065f46;
+  --pill-ok-border: #bbf7d0;
+
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+
+  --table-border: #e5e7eb;
 }
 
-/* ---------- Layout ---------- */
+/* Base */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.35;
+}
+
+/* Layout */
 .container {
-  max-width: 1100px;
-  margin: 24px auto 100px;
+  max-width: 1060px;
+  margin: 24px auto 120px;
   padding: 0 16px;
 }
 
-header.card {
-  position: sticky;
-  top: 0;
-  background: var(--bg-card);
-  box-shadow: var(--shadow);
-  z-index: 10;
-}
-
-/* ---------- Card structure ---------- */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
   box-shadow: var(--shadow);
-  padding: 20px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
 }
 
-/* ---------- Headings ---------- */
-h1 {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
+header.card { position: sticky; top: 0; z-index: 10; }
 
-h2 {
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
+/* Type */
+h1 { margin: 0 0 6px; font-size: 28px; }
+h2 { margin: 0 0 8px; font-size: 22px; }
+h3 { margin: 12px 0 8px; font-size: 16px; font-weight: 600; color: var(--muted); }
 
-h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 12px 0 8px;
-  color: var(--text-muted);
-}
+/* Rows / grid */
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.row.small { font-size: 13px; color: var(--muted); }
+.row.small.success { color: var(--ok); }
+.row.small.reverted, .row.small.error { color: var(--err); }
+.row.small.pending { color: var(--warn); }
 
-/* ---------- Typography ---------- */
-p, span, label {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.small {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ---------- Rows / layout helpers ---------- */
-.row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 6px;
-}
-
-.row.small {
-  font-size: 13px;
-}
-
-.row.small.success {
-  color: var(--ok);
-}
-.row.small.reverted,
-.row.small.error {
-  color: var(--err);
-}
-.row.small.pending {
-  color: var(--warn);
-}
-
-/* ---------- Grid ---------- */
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 18px;
 }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 
-@media (max-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ---------- Pills ---------- */
+/* Role pills */
 .pill {
   display: inline-block;
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #334155;
-  border: 1px solid #dbeafe;
+  background: var(--pill);
+  color: var(--pill-ink);
+  border: 1px solid var(--pill-border);
+  margin-left: 6px;
 }
-
 .pill.ok {
-  background: #ecfdf5;
-  color: #065f46;
-  border-color: #bbf7d0;
+  background: var(--pill-ok);
+  color: var(--pill-ok-ink);
+  border-color: var(--pill-ok-border);
 }
 
-/* ---------- Inputs ---------- */
-input,
-select,
-textarea {
+/* Inputs / buttons */
+input, select {
   width: 100%;
   height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--border);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  background: var(--bg-input);
-  color: #111111;
-  transition: border-color 0.15s ease;
+  color: var(--fg);
 }
+input[type="file"] { padding: 6px; height: auto; }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--accent);
-  outline: none;
-}
-
-input[type="file"] {
-  padding: 6px;
-  height: auto;
-  background: var(--bg-muted);
-  border: 1px dashed var(--border);
-}
-
-/* ---------- Buttons ---------- */
 button {
-  height: 36px;
-  padding: 0 16px;
+  height: 34px;
+  padding: 0 14px;
   border: none;
   border-radius: 8px;
   background: var(--primary);
-  color: white;
+  color: var(--primary-ink);
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease;
 }
+button[disabled] { opacity: .6; cursor: not-allowed; }
+button.secondary { background: #e5e7eb; color: #111; }
 
-button:hover:not([disabled]) {
-  background: var(--primary-hover);
-}
-
-button[disabled] {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-button.secondary {
-  background: #e5e7eb;
-  color: #111111;
-}
-
-/* ---------- Tables ---------- */
+/* Tables / boxes */
 .table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  margin-top: 8px;
   font-size: 14px;
 }
-
-.table th,
-.table td {
-  border: 1px solid var(--border);
+.table th, .table td {
+  border: 1px solid var(--table-border);
   padding: 8px 10px;
   text-align: left;
-  background: #ffffff;
+  background: #fff;
 }
-
-.table th {
-  background: var(--bg-muted);
-  font-weight: 600;
-}
-
-/* ---------- Box / Results ---------- */
 .box {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--table-border);
+  border-radius: 10px;
   padding: 10px 12px;
-  background: #ffffff;
-  margin-top: 10px;
-}
-
-.box b {
-  color: #111111;
-}
-
-/* ---------- Error / Messages ---------- */
-.error {
   margin-top: 8px;
-  color: var(--err);
-  font-weight: 600;
+  background: #fff;
 }
 
-/* ---------- Links ---------- */
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* ---------- Footer ---------- */
-footer {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 40px;
-}
-
-/* ---------- Utility ---------- */
-.center {
-  text-align: center;
-}
-
-.success {
-  color: var(--ok);
-}
-.pending {
-  color: var(--warn);
-}
-.failed,
-.error {
-  color: var(--err);
-}
+/* Helpers */
+.error { margin-top: 8px; color: var(--err); font-weight: 600; }
+.center { text-align: center; }
+.small { font-size: 12px; color: var(--muted); }
