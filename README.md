@@ -9,7 +9,7 @@ A decentralized school management system built on **Ethereum** and **IPFS**. Reg
 ### 1. Clone & Install
 
 ```bash
-git clone git@github.com:PhillipGudov/powerschool-dapp.git
+git clone git link TBI
 cd smart-contracts
 npm install
 
@@ -30,8 +30,6 @@ The app needs three services running locally before use:
 🧱 Step 2.1 — Start Your Blockchain
 
 - Open Ganache.
-
-- Create a new workspace → name it UpSchool.
 
 - Make sure it’s running on:
 
