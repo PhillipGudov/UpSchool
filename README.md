@@ -29,7 +29,7 @@ The app needs three services running locally before use:
 
 🧱 Step 2.1 — Start Your Blockchain
 
-- Open Ganache.
+- Open Ganache through terminal under the smart-contracts directory.
 
 - Make sure it’s running on:
 
