@@ -29,30 +29,30 @@ The app needs three services running locally before use:
 
 🧱 Step 2.1 — Start Your Blockchain
 
-Open Ganache.
+- Open Ganache.
 
-Create a new workspace → name it UpSchool.
+- Create a new workspace → name it UpSchool.
 
-Make sure it’s running on:
+- Make sure it’s running on:
 
-Network ID: 1337
+- Network ID: 1337
 
-RPC Server: http://127.0.0.1:8545
+- RPC Server: http://127.0.0.1:8545
 
-Copy your Account #0 private key (this will be the Registrar).
+- Copy your Account #0 private key (this will be the Registrar).
 
 📦 Step 2.2 — Launch IPFS Daemon
 
-Install Kubo which will have 'ipfs' inside.
+- Install Kubo which will have 'ipfs' inside through the terminal
 
-Create a `.env` file in the frontend or it should be created and you only have to adjust the Contract Address and VITE_IPFS_GATEWAY:
+- Create a `.env` file in the frontend or it should be created and you only have to adjust the Contract Address and VITE_IPFS_GATEWAY:
 
 ```ini
 VITE_CONTRACT_ADDRESS=0xYourDeployedContractAddress
 VITE_IPFS_API=http://127.0.0.1:5001
 ```
 
-Make sure your local blockchain (i.e. Ganache) is running and your smart contract is deployed. Ganache is running on http://127.0.0.1:8545 with Chain ID 1337 and IPFS daemon is active on port 5001.
+- Make sure your local blockchain (i.e. Ganache) is running and your smart contract is deployed. Ganache is running on http://127.0.0.1:8545 with Chain ID 1337 and IPFS daemon is active on port 5001.
 
 ---
 
