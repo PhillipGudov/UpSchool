@@ -37,7 +37,7 @@ The app needs three services running locally before use:
 
 - RPC Server: http://127.0.0.1:8545
 
-- Copy your Account #0 private key (this will be the Registrar).
+- Copy your Account #0 private key (this will be the Registrar) and two other private keys. The two other private keys will be the student and teacher.
 
 📦 Step 2.2 — Launch IPFS Daemon
 
