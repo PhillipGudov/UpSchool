@@ -110,6 +110,9 @@ npm run dev
 | Chain ID        | 1337                                           |
 | Currency Symbol | ETH                                            |
 
+
+<img width="349" height="566" alt="image" src="https://github.com/user-attachments/assets/009773ee-6ad7-419a-a624-ab297d7a101f" />
+
 - Then import your Ganache Account #0 private key. 
 - This account acts as the Registrar (admin of the contract).
 
