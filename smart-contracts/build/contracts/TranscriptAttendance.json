@@ -22487,10 +22487,22 @@
       "links": {},
       "address": "0xb307c3e6d3998d5D484B9CC6f8967F8406327c5d",
       "transactionHash": "0x546076b723aa0e924b94f895db351daaab93478b7a361b0783efd39ea6640c98"
+    },
+    "1761799118843": {
+      "events": {},
+      "links": {},
+      "address": "0x0a2E0AA9ff802fa744e3B8E1CB208847a25fF78d",
+      "transactionHash": "0xc9367cbbb0b8e164ed69d1d9f397b5a2b6f91f80dc7c7010ce2581f2fd1c0f27"
+    },
+    "1761800449973": {
+      "events": {},
+      "links": {},
+      "address": "0x79241B7b76346442e49DB4532DF748a590aFAD91",
+      "transactionHash": "0x8af4e57442469ebfd5509ad8279510440b2cfe33c8100b95d8819e1ff0f4b15c"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-10-29T02:41:55.281Z",
+  "updatedAt": "2025-10-30T05:08:01.003Z",
   "networkType": "ethereum",
   "devdoc": {
     "details": "Uses OpenZeppelin AccessControl. Roles:      - DEFAULT_ADMIN_ROLE: full admin (granted to registrar in ctor)      - REGISTRAR_ROLE: registrar-only functions      - TEACHER_ROLE: teacher-only functions (auto-granted on addCourse to the assigned teacher)",
