@@ -75,6 +75,7 @@ Get-Content smart-contracts\build\contracts\TranscriptAttendance.json |
 ### 4. Run
 
 ```bash
+cd ..
 cd frontend
 npm run dev
 ```
