@@ -6,7 +6,7 @@ A decentralized school management system built on **Ethereum** and **IPFS**. Reg
 
 ## 🚀 Quick Start
 
-### 1. Clone & Install
+### 1. Clone & Install (through VS Code preferably)
 
 ```bash
 git clone https://github.com/PhillipGudov/UpSchool.git
