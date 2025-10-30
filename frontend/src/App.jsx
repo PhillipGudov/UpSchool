@@ -1,13 +1,9 @@
-// frontend/src/App.jsx
-// UpSchool Interface — Phase 1 polish (with added micro-descriptions)
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ethers } from "ethers";
 import { create as createIpfsClient } from "ipfs-http-client";
 import abi from "./abi.json";
 import "./index.css";
 
-/* ---------- tiny toast system ---------- */
 function Toasts({ toasts, onClose }) {
   return (
     <div className="toast-wrap" aria-live="polite">
@@ -37,18 +33,15 @@ function Toasts({ toasts, onClose }) {
 }
 
 export default function App() {
-  // ENV
   const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
   const IPFS_API = import.meta.env.VITE_IPFS_API || "http://127.0.0.1:5001";
   const LOCAL_GATEWAY = import.meta.env.VITE_IPFS_GATEWAY || "http://127.0.0.1:8080/ipfs/";
 
-  // singletons
   const providerRef = useRef(null);
   const signerRef = useRef(null);
   const contractRef = useRef(null);
   const headerRef = useRef(null);
 
-  // state
   const [ipfs, setIpfs] = useState(null);
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
@@ -63,7 +56,6 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Toasts
   const [toasts, setToasts] = useState([]);
   const pushToast = (t) => {
     const id = Math.random().toString(36).slice(2);
@@ -75,7 +67,6 @@ export default function App() {
   const updateToast = (id, next) => setToasts((x) => x.map((t) => (t.id === id ? { ...t, ...next } : t)));
   const closeToast = (id) => setToasts((x) => x.filter((t) => t.id !== id));
 
-  // Registrar inputs
   const [courseId, setCourseId] = useState("");
   const [courseName, setCourseName] = useState("");
   const [teacherAddr, setTeacherAddr] = useState("");
@@ -83,7 +74,6 @@ export default function App() {
   const [enrollCourseId, setEnrollCourseId] = useState("");
   const [newFeeEth, setNewFeeEth] = useState("");
 
-  // Teacher inputs
   const [issueCourseId, setIssueCourseId] = useState("");
   const [issueStudentAddr, setIssueStudentAddr] = useState("");
   const [grade, setGrade] = useState("");
@@ -95,17 +85,14 @@ export default function App() {
   const [attStatus, setAttStatus] = useState("Present");
   const [attFile, setAttFile] = useState(null);
 
-  // Student views
   const [viewCourseId, setViewCourseId] = useState("");
   const [recordView, setRecordView] = useState(null);
   const [attendanceView, setAttendanceView] = useState([]);
 
-  // Verifier
   const [verStudentAddr, setVerStudentAddr] = useState("");
   const [verCourseId, setVerCourseId] = useState("");
   const [verifyResult, setVerifyResult] = useState(null);
 
-  // role ids
   const REGISTRAR_ROLE = useMemo(
     () => ethers.keccak256(ethers.toUtf8Bytes("REGISTRAR_ROLE")),
     []
@@ -115,7 +102,6 @@ export default function App() {
     []
   );
 
-  /* ---------- init IPFS ---------- */
   useEffect(() => {
     try {
       setIpfs(createIpfsClient({ url: IPFS_API }));
@@ -124,7 +110,6 @@ export default function App() {
     }
   }, [IPFS_API]);
 
-  /* ---------- header shadow on scroll ---------- */
   useEffect(() => {
     const onScroll = () => {
       const h = headerRef.current;
@@ -137,7 +122,6 @@ export default function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  /* ---------- wallet + contract ---------- */
   const connect = async () => {
     setError("");
     if (!window.ethereum) return setError("MetaMask not found.");
@@ -203,10 +187,8 @@ export default function App() {
 
   useEffect(() => {
     connect().catch((e) => setError(e.message));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ---------- helpers ---------- */
   const runTx = async (fn, label = "Transaction") => {
     setError("");
     setBusy(true);
@@ -245,7 +227,6 @@ export default function App() {
 
   const short = (s) => (s ? `${s.slice(0, 6)}…${s.slice(-4)}` : "");
 
-  /* ---------- Registrar ---------- */
   const onAddCourse = () =>
     runTx(
       () =>
@@ -281,7 +262,6 @@ export default function App() {
 
   const onWithdraw = () => runTx(() => contractRef.current.withdrawFees(), "Withdraw fees");
 
-  /* ---------- Teacher ---------- */
   const onIssueGrade = async () => {
     const ipfsHash = await uploadToIPFS(gradeFile);
     return runTx(
@@ -322,7 +302,6 @@ export default function App() {
       "Finalize record"
     );
 
-  /* ---------- Student views ---------- */
   const onViewRecord = async () => {
     setError("");
     setRecordView(null);
@@ -351,7 +330,6 @@ export default function App() {
     }
   };
 
-  /* ---------- Verifier ---------- */
   const onVerify = async () => {
     setError("");
     setVerifyResult(null);
@@ -377,7 +355,6 @@ export default function App() {
     }
   };
 
-  /* ---------- UI ---------- */
   const onGanache = Number(chainId) === 1337;
   const feeEth = ethers.formatEther(feeWei || "0");
 
