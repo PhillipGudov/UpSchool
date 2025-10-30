@@ -54,7 +54,7 @@ VITE_IPFS_API=http://127.0.0.1:5001
 
 ---
 
-### 3. Deploy Smart Contracts
+### 3. Deploy Smart Contracts (in a new terminal with Ganache still running)
 
 ```bash
 cd smart-contracts
