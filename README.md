@@ -93,32 +93,18 @@ npm run dev
 
 ---
 
-## 📂 Project Structure
+## 🔗 Connecting to MetaMask
 
-```
-DecentralizedMusicApp/
-├─ public/                # Static assets & HTML template
-├─ src/
-│  ├─ components/         # Reusable UI components
-│  ├─ pages/              # Page-level React components
-│  ├─ contracts/          # Truffle/Hardhat-compiled ABI JSON
-│  ├─ theme.css           # Custom styling variables & overrides
-│  ├─ App.js              # Main router + layout
-│  └─ index.js            # Entry point
-├─ .env                   # Environment variables
-├─ package.json
-└─ README.md
-```
+- Add a Custom Network in MetaMask:
+| Field           | Value                                          |
+| --------------- | ---------------------------------------------- |
+| Network Name    | Localhost 8545                                 |
+| RPC URL         | [http://127.0.0.1:8545](http://127.0.0.1:8545) |
+| Chain ID        | 1337                                           |
+| Currency Symbol | ETH                                            |
 
----
-
-## 🔗 Connecting to Ethereum
-
-We use **MetaMask** to interact with your local node or testnet:
-
-1. Click **Connect Wallet** in the top-right.  
-2. Approve the connection in MetaMask.  
-3. You’re ready to upload, purchase, and withdraw!
+- Then import your Ganache Account #0 private key. 
+- This account acts as the Registrar (admin of the contract).
 
 ---
 
