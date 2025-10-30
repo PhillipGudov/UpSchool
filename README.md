@@ -116,6 +116,20 @@ npm run dev
 
 ---
 
+## 🚢 Importing Accounts into MetaMask
+
+- Top left click the account name with the arrow pointing down.
+  
+- Add Wallet
+
+- Import an Account
+
+- It should be through a private key. This is the reason we saved it in Step 2.1
+
+- Then connect it to the custom network we set up.
+
+---
+
 ## 🧯 Troubleshooting
 
 | Issue                   | Fix                                                   |
