@@ -101,6 +101,7 @@ npm run dev
 ## 🔗 Connecting to MetaMask
 
 - Add a Custom Network in MetaMask:
+
 | Field           | Value                                          |
 | --------------- | ---------------------------------------------- |
 | Network Name    | Localhost 8545                                 |
