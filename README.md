@@ -1,6 +1,6 @@
 # UpSchool 🎓
 
-A decentralized school management system built on **Ethereum** and **IPFS**. Registrars create courses, teachers issue grades and attendance, students view records, and verifiers confirm authenticity — all on-chain, no intermediaries
+A decentralized school management system built on **Ethereum** and **IPFS**. Registrars create courses, teachers issue grades and attendance, students view records, and verifiers confirm authenticity
 
 ---
 
@@ -16,6 +16,7 @@ npm install
 cd ../frontend
 npm install
 ```
+---
 
 ### 2. Configure Environment
 
@@ -53,6 +54,8 @@ VITE_IPFS_API=http://127.0.0.1:5001
 
 Make sure your local blockchain (i.e. Ganache) is running and your smart contract is deployed. Ganache is running on http://127.0.0.1:8545 with Chain ID 1337 and IPFS daemon is active on port 5001.
 
+---
+
 ### 3. Deploy Smart Contracts
 
 ```bash
@@ -68,6 +71,8 @@ Get-Content smart-contracts\build\contracts\TranscriptAttendance.json |
   ConvertTo-Json -Depth 100 |
   Out-File frontend\src\abi.json -Encoding utf8
 ```
+
+---
 
 ### 4. Run
 
