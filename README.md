@@ -37,9 +37,6 @@ The app needs three services running locally before use:
 
 - RPC Server: http://127.0.0.1:8545
 
-<img width="349" height="566" alt="image" src="https://github.com/user-attachments/assets/009773ee-6ad7-419a-a624-ab297d7a101f" />
-
-
 - Copy your Account #0 private key (this will be the Registrar).
 
 📦 Step 2.2 — Launch IPFS Daemon
