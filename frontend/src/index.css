@@ -1,12 +1,5 @@
-/* ============================
-   UpSchool — Phase 1 (polished)
-   Font: Plus Jakarta Sans
-   ============================ */
-
-/* Load smooth, modern font */
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 
-/* -------- Tokens -------- */
 :root {
   --bg: #ffffff;
   --fg: #111111;
@@ -36,7 +29,6 @@
   --table-border: #e5e7eb;
 }
 
-/* -------- Base -------- */
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 html { scroll-behavior: smooth; }
@@ -54,7 +46,6 @@ body {
   letter-spacing: 0.01em;
 }
 
-/* -------- Layout -------- */
 .container {
   max-width: 1180px;
   margin: 28px auto 140px;
@@ -70,7 +61,6 @@ body {
   margin-bottom: 22px;
 }
 
-/* -------- Header -------- */
 .header { position: sticky; top: 0; z-index: 10; transition: box-shadow .2s ease, border-color .2s ease; }
 .header.elevated { box-shadow: 0 8px 24px rgba(0,0,0,.08); border-color: #e6ecff; }
 
@@ -94,16 +84,13 @@ body {
 .net-badge.ok { background: #ecfdf5; border-color: #bbf7d0; color: #065f46; }
 .net-badge.warn { background: #fff7ed; border-color: #fde68a; color: #92400e; }
 
-/* -------- Sections -------- */
 .section { scroll-margin-top: 86px; }
 .divider { height: 1px; background: #eef2ff; margin: 8px 0 18px; }
 
-/* -------- Type -------- */
 h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; letter-spacing: 0; }
 h2 { margin: 0 0 6px; font-size: 24px; font-weight: 700; letter-spacing: 0; }
 h3 { margin: 12px 0 8px; font-size: 16px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
 
-/* -------- Rows / grid -------- */
 .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .row.small { font-size: 13px; color: var(--muted); }
 .roles { margin-top: 8px; }
@@ -116,7 +103,6 @@ h3 { margin: 12px 0 8px; font-size: 16px; font-weight: 600; letter-spacing: 0; c
 }
 @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
 
-/* -------- Role pills -------- */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -140,7 +126,6 @@ h3 { margin: 12px 0 8px; font-size: 16px; font-weight: 600; letter-spacing: 0; c
 }
 .pill.link:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,.08); }
 
-/* -------- Inputs / buttons -------- */
 input, select {
   width: 100%;
   height: 38px;
@@ -177,7 +162,6 @@ button.secondary { background: #e5e7eb; color: #111; }
   font-weight: 600; cursor: pointer; font-family: inherit;
 }
 
-/* -------- Tables / boxes -------- */
 .table {
   width: 100%;
   border-collapse: separate;
