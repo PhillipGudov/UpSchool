@@ -1,5 +1,3 @@
-// smart-contracts/migrations/1_deploy.js
-// ─────────────────────────────────────────
 const TranscriptAttendance = artifacts.require("TranscriptAttendance");
 
 module.exports = async function (deployer, network, accounts) {
