@@ -9,7 +9,7 @@ A decentralized school management system built on **Ethereum** and **IPFS**. Reg
 ### 1. Clone & Install
 
 ```bash
-git clone git link TBI
+git clone https://github.com/PhillipGudov/UpSchool.git
 cd smart-contracts
 npm install
 
