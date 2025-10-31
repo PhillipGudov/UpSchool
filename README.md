@@ -63,11 +63,11 @@ npx truffle migrate --network development --reset
 ```
 - Export the ABI for the frontend
 ```powershell
-Get-Content smart-contracts\build\contracts\TranscriptAttendance.json |
-  ConvertFrom-Json |
-  Select-Object -Expand abi |
-  ConvertTo-Json -Depth 100 |
-  Out-File frontend\src\abi.json -Encoding utf8
+Get-Content build\contracts\TranscriptAttendance.json |
+ConvertFrom-Json |
+Select-Object -Expand abi |
+ConvertTo-Json -Depth 100 |
+Out-File ..\frontend\src\abi.json -Encoding utf8
 ```
 
 ---
