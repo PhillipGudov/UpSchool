@@ -81,7 +81,7 @@ export default function App() {
 
   const [attCourseId, setAttCourseId] = useState("");
   const [attStudentAddr, setAttStudentAddr] = useState("");
-  const [attDate, setAttDate] = useState(""); // yyyy-mm-dd
+  const [attDate, setAttDate] = useState(""); 
   const [attStatus, setAttStatus] = useState("Present");
   const [attFile, setAttFile] = useState(null);
 
@@ -93,14 +93,8 @@ export default function App() {
   const [verCourseId, setVerCourseId] = useState("");
   const [verifyResult, setVerifyResult] = useState(null);
 
-  const REGISTRAR_ROLE = useMemo(
-    () => ethers.keccak256(ethers.toUtf8Bytes("REGISTRAR_ROLE")),
-    []
-  );
-  const TEACHER_ROLE = useMemo(
-    () => ethers.keccak256(ethers.toUtf8Bytes("TEACHER_ROLE")),
-    []
-  );
+  const REGISTRAR_ROLE = useMemo(() => ethers.keccak256(ethers.toUtf8Bytes("REGISTRAR_ROLE")), []);
+  const TEACHER_ROLE = useMemo(() => ethers.keccak256(ethers.toUtf8Bytes("TEACHER_ROLE")), []);
 
   useEffect(() => {
     try {
@@ -191,7 +185,6 @@ export default function App() {
 
   const runTx = async (fn, label = "Transaction") => {
     setError("");
-    setBusy(true);
     let tid;
     try {
       const tx = await fn();
@@ -203,11 +196,10 @@ export default function App() {
       if (tid) updateToast(tid, { kind: "error", title: `${label}: failed`, body: e.shortMessage || e.message });
       else pushToast({ kind: "error", title: `${label}: failed`, body: e.shortMessage || e.message });
       setError(e.shortMessage || e.message);
-    } finally {
-      setBusy(false);
     }
   };
 
+  // ✅ IPFS upload helper (just returns CID)
   const uploadToIPFS = async (file) => {
     if (!file || !ipfs) return "";
     const res = await ipfs.add(file);
@@ -218,23 +210,15 @@ export default function App() {
     return cid;
   };
 
-  const scrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 86;
-    window.scrollTo({ top: y, behavior: "smooth" });
-  };
-
   const short = (s) => (s ? `${s.slice(0, 6)}…${s.slice(-4)}` : "");
 
   const onAddCourse = () =>
     runTx(
-      () =>
-        contractRef.current.addCourse(
-          BigInt(courseId || "0"),
-          courseName || "",
-          teacherAddr || ethers.ZeroAddress
-        ),
+      () => contractRef.current.addCourse(
+        BigInt(courseId || "0"),
+        courseName || "",
+        teacherAddr || ethers.ZeroAddress
+      ),
       "Add course"
     );
 
@@ -262,34 +246,45 @@ export default function App() {
 
   const onWithdraw = () => runTx(() => contractRef.current.withdrawFees(), "Withdraw fees");
 
+  // ✅ FIXED: Issue Grade workflow (safe busy & upload sequencing)
   const onIssueGrade = async () => {
-    const ipfsHash = await uploadToIPFS(gradeFile);
-    return runTx(
-      () =>
-        contractRef.current.issueGrade(
-          issueStudentAddr || ethers.ZeroAddress,
-          BigInt(issueCourseId || "0"),
-          grade || "",
-          ipfsHash
-        ),
-      "Issue grade"
-    );
+    setBusy(true);
+    try {
+      const cid = await uploadToIPFS(gradeFile);
+      await runTx(
+        () =>
+          contractRef.current.issueGrade(
+            issueStudentAddr || ethers.ZeroAddress,
+            BigInt(issueCourseId || "0"),
+            grade || "",
+            cid
+          ),
+        "Issue grade"
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onMarkAttendance = async () => {
-    const ipfsHash = await uploadToIPFS(attFile);
-    const ts = attDate ? Math.floor(new Date(`${attDate}T00:00:00Z`).getTime() / 1000) : 0;
-    return runTx(
-      () =>
-        contractRef.current.markAttendance(
-          attStudentAddr || ethers.ZeroAddress,
-          BigInt(attCourseId || "0"),
-          BigInt(ts),
-          { Present: 0, Absent: 1, Excused: 2 }[attStatus] ?? 0,
-          ipfsHash
-        ),
-      "Mark attendance"
-    );
+    setBusy(true);
+    try {
+      const cid = await uploadToIPFS(attFile);
+      const ts = attDate ? Math.floor(new Date(`${attDate}T00:00:00Z`).getTime() / 1000) : 0;
+      await runTx(
+        () =>
+          contractRef.current.markAttendance(
+            attStudentAddr || ethers.ZeroAddress,
+            BigInt(attCourseId || "0"),
+            BigInt(ts),
+            { Present: 0, Absent: 1, Excused: 2 }[attStatus] ?? 0,
+            cid
+          ),
+        "Mark attendance"
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onFinalize = () =>
@@ -392,10 +387,10 @@ export default function App() {
 
         <div className="row roles">
           <span>Roles:</span>
-          <button className={`pill link ${roles.registrar ? "ok" : ""}`} onClick={() => scrollTo("registrar")}>📘 Registrar</button>
-          <button className={`pill link ${roles.teacher ? "ok" : ""}`}   onClick={() => scrollTo("teacher")}>🧑‍🏫 Teacher</button>
-          <button className={`pill link ${roles.student ? "ok" : ""}`}   onClick={() => scrollTo("student")}>🎓 Student</button>
-          <button className={`pill link ${roles.verifier ? "ok" : ""}`}  onClick={() => scrollTo("verifier")}>✅ Verifier</button>
+          <button className={`pill link ${roles.registrar ? "ok" : ""}`} onClick={() => document.getElementById("registrar").scrollIntoView()}>📘 Registrar</button>
+          <button className={`pill link ${roles.teacher ? "ok" : ""}`}   onClick={() => document.getElementById("teacher").scrollIntoView()}>🧑‍🏫 Teacher</button>
+          <button className={`pill link ${roles.student ? "ok" : ""}`}   onClick={() => document.getElementById("student").scrollIntoView()}>🎓 Student</button>
+          <button className={`pill link ${roles.verifier ? "ok" : ""}`}  onClick={() => document.getElementById("verifier").scrollIntoView()}>✅ Verifier</button>
         </div>
 
         <div className="row small meta">
