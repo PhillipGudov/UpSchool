@@ -6,7 +6,7 @@ A decentralized school management system built on **Ethereum** and **IPFS**. Reg
 
 ## 🚀 Quick Start
 
-### 1. Clone & Install
+### 1. Clone & Install (through VS Code preferably)
 
 ```bash
 git clone https://github.com/PhillipGudov/UpSchool.git
@@ -29,7 +29,7 @@ The app needs three services running locally before use:
 
 🧱 Step 2.1 — Start Your Blockchain
 
-- Open Ganache.
+- Open Ganache through terminal under the smart-contracts directory.
 
 - Make sure it’s running on:
 
@@ -37,7 +37,7 @@ The app needs three services running locally before use:
 
 - RPC Server: http://127.0.0.1:8545
 
-- Copy your Account #0 private key (this will be the Registrar).
+- Copy your Account #0 private key (this will be the Registrar) and two other private keys. The two other private keys will be the student and teacher.
 
 📦 Step 2.2 — Launch IPFS Daemon
 
@@ -54,7 +54,7 @@ VITE_IPFS_API=http://127.0.0.1:5001
 
 ---
 
-### 3. Deploy Smart Contracts
+### 3. Deploy Smart Contracts (in a new terminal with Ganache still running)
 
 ```bash
 cd smart-contracts
@@ -63,11 +63,11 @@ npx truffle migrate --network development --reset
 ```
 - Export the ABI for the frontend
 ```powershell
-Get-Content smart-contracts\build\contracts\TranscriptAttendance.json |
-  ConvertFrom-Json |
-  Select-Object -Expand abi |
-  ConvertTo-Json -Depth 100 |
-  Out-File frontend\src\abi.json -Encoding utf8
+Get-Content build\contracts\TranscriptAttendance.json |
+ConvertFrom-Json |
+Select-Object -Expand abi |
+ConvertTo-Json -Depth 100 |
+Out-File ..\frontend\src\abi.json -Encoding utf8
 ```
 
 ---
@@ -75,6 +75,7 @@ Get-Content smart-contracts\build\contracts\TranscriptAttendance.json |
 ### 4. Run
 
 ```bash
+cd ..
 cd frontend
 npm run dev
 ```
@@ -112,6 +113,20 @@ npm run dev
 
 - Then import your Ganache Account #0 private key. 
 - This account acts as the Registrar (admin of the contract).
+
+---
+
+## 🚢 Importing Accounts into MetaMask
+
+- Top left click the account name with the arrow pointing down.
+  
+- Add Wallet
+
+- Import an Account
+
+- It should be through a private key. This is the reason we saved it in Step 2.1
+
+- Then connect it to the custom network we set up.
 
 ---
 
