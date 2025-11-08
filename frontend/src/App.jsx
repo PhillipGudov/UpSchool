@@ -199,7 +199,6 @@ export default function App() {
     }
   };
 
-  // ✅ IPFS upload helper (just returns CID)
   const uploadToIPFS = async (file) => {
     if (!file || !ipfs) return "";
     const res = await ipfs.add(file);
@@ -246,7 +245,6 @@ export default function App() {
 
   const onWithdraw = () => runTx(() => contractRef.current.withdrawFees(), "Withdraw fees");
 
-  // ✅ FIXED: Issue Grade workflow (safe busy & upload sequencing)
   const onIssueGrade = async () => {
     setBusy(true);
     try {

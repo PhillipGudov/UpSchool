@@ -1,7 +1,6 @@
 const TranscriptAttendance = artifacts.require("TranscriptAttendance");
 
 module.exports = async function (deployer, network, accounts) {
-  // Keep it simple for local dev:
   // registrar: accounts[0], treasury: accounts[1]
   const registrar = accounts[0];
   const treasury = accounts[1];

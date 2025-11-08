@@ -22517,10 +22517,28 @@
       "links": {},
       "address": "0x7EEaefa88bdCE3Ef5BF0D57C6DA085e98a5B2916",
       "transactionHash": "0x0471e6435868309c4b721dcee23efdcf651e0d632a33cd9dd0f696f147d7517d"
+    },
+    "1762314825178": {
+      "events": {},
+      "links": {},
+      "address": "0xd8840a6620fDc919Ca306B97908D0C48537E66D8",
+      "transactionHash": "0x89196f277b0aea87bf717dcb78d72e11f663b60e08cc9dbdd8a011d4a3f02a35"
+    },
+    "1762488720170": {
+      "events": {},
+      "links": {},
+      "address": "0x2A4Df52F72d0CD0B8D28F309a81B47fC5058072c",
+      "transactionHash": "0x1b77001510a1d1ddc0f555c5c4d6cda784695a08b2a6649c7c580daefc2ab116"
+    },
+    "1762490983056": {
+      "events": {},
+      "links": {},
+      "address": "0x462Eb53E689770DF2285DD81Fb37Af2393DE2AE6",
+      "transactionHash": "0x44b4669a197e3dd8d6bb536e548252412944b02ad77f04a83934864b70efbd8c"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-11-05T03:01:30.856Z",
+  "updatedAt": "2025-11-07T04:50:52.169Z",
   "networkType": "ethereum",
   "devdoc": {
     "details": "Uses OpenZeppelin AccessControl. Roles:      - DEFAULT_ADMIN_ROLE: full admin (granted to registrar in ctor)      - REGISTRAR_ROLE: registrar-only functions      - TEACHER_ROLE: teacher-only functions (auto-granted on addCourse to the assigned teacher)",
